@@ -10,7 +10,6 @@ describe('routes : static', () =>
   {
     it('should return status code 200', (done) =>
     {
-      console.log(base);
       request.get(`${base}/`, (err, res, body) =>
       {
         expect(res.statusCode).toBe(200);
