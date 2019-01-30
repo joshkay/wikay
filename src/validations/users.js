@@ -33,5 +33,35 @@ module.exports =
     {
       return next();
     }
+  },
+  validateSignIn(req, res, next)
+  {
+    if (req.method === 'POST')
+    {
+      req.checkBody('username', 'must be at least 6 characters in length').isLength({min: 6});
+      req.checkBody('username', 'must not contain spaces')
+        .custom(value => !/\s/.test(value));
+      req.checkBody('password', 'must be at least 6 characters in length').isLength({min: 6});
+    }
+
+    const errors = req.validationErrors();
+
+    if (errors)
+    {
+      const form = 
+      {
+        username: req.body.username,
+        password: req.body.password
+      };
+
+      req.flash('errors', errors);
+      req.flash('form', form);
+      
+      return res.redirect(303, req.headers.referer);
+    }
+    else
+    {
+      return next();
+    }
   }
 };

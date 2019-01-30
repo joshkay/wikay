@@ -46,4 +46,51 @@ module.exports =
       }
     });
   },
+  signInForm(req, res, next)
+  {
+    res.render('users/sign_in');
+  },
+  signIn(req, res, next)
+  {
+    passport.authenticate('local', (err, user, info) =>
+    {
+      if (err) 
+      { 
+        return next(err); 
+      }
+
+      if (user)
+      {
+        req.login(user, (err) => 
+        {
+          if (err) 
+          { 
+            return next(err); 
+          }
+
+          req.flash('notice', "You've successfully signed in!");
+          res.redirect('/');
+        });
+      }
+      else
+      {
+        let form =
+        {
+          username: req.body.username,
+          password: req.body.password
+        };
+        
+        req.flash('notice', 'Sign in failed. Please try again.');
+        req.flash('form', form);
+
+        res.redirect('/users/sign_in');
+      }
+    })(req, res, next);
+  },
+  signOut(req, res, next)
+  {
+    req.logout();
+    req.flash('notice', "You've successfully signed out!");
+    res.redirect('/');
+  }
 };

@@ -5,7 +5,8 @@ const sequelize = require('../../src/db/models/index').sequelize;
 const User = require('../../src/db/models').User;
 
 const app = require('../../src/app');
-const base = `http://localhost:${app.get('port')}/users`;
+const base = `http://localhost:${app.get('port')}`;
+const userBase = `${base}/users`;
 
 describe('routes : users', () =>
 {
@@ -25,7 +26,7 @@ describe('routes : users', () =>
 
   describe('GET /users/sign_up', () =>
   {
-    const url = `${base}/sign_up`;
+    const url = `${userBase}/sign_up`;
 
     it('should return status code 200', (done) =>
     {
@@ -52,7 +53,7 @@ describe('routes : users', () =>
     {
       const options =
       {
-        url: `${base}/`,
+        url: `${userBase}/`,
         form:
         {
           username: 'exampleuser',
@@ -122,7 +123,7 @@ describe('routes : users', () =>
     {
       const options = 
       {
-        url: `${base}/`,
+        url: `${userBase}/`,
         form:
         {
           username: 'invaliduser',
@@ -166,7 +167,7 @@ describe('routes : users', () =>
     {
       const options = 
       {
-        url: `${base}/`,
+        url: `${userBase}/`,
         form:
         {
           username: 'short',
@@ -210,7 +211,7 @@ describe('routes : users', () =>
     {
       const options = 
       {
-        url: `${base}/`,
+        url: `${userBase}/`,
         form:
         {
           username: 'testuser123',
@@ -254,7 +255,7 @@ describe('routes : users', () =>
     {
       const options = 
       {
-        url: `${base}/`,
+        url: `${userBase}/`,
         form:
         {
           username: 'testuser123',
@@ -289,6 +290,125 @@ describe('routes : users', () =>
         request.post(options, (err, res, body) =>
         {
           expect(res.statusCode).toBe(303);
+          done();
+        });
+      });
+    });
+  });
+
+  describe('GET /users/sign_in', () =>
+  {
+    const url = `${userBase}/sign_in`;
+
+    it('should return status code 200', (done) =>
+    {
+      request.get(url, (err, res, body) =>
+      {
+        expect(res.statusCode).toBe(200);
+        done();
+      });
+    });
+
+    it('should render a view with a sign in form', (done) =>
+    {
+      request.get(`${userBase}/sign_in`, (err, res, body) =>
+      {
+        expect(err).toBeNull();
+        expect(body).toContain('Sign in');
+        done();
+      });
+    });
+  });
+
+  describe('POST /users/sign_in', () =>
+  {
+    beforeEach((done) =>
+    {
+      const options =
+      {
+        url: `${userBase}/`,
+        form:
+        {
+          username: 'exampleuser',
+          email: 'user@example.com',
+          password: '123456789',
+          passwordConfirmation: '123456789',
+        }
+      };
+      
+      request.post(options, (err, res, body) =>
+      {
+        done();
+      });
+    });
+
+    describe('with valid user information', () =>
+    {
+      const options =
+      {
+        url: `${userBase}/sign_in`,
+        form:
+        {
+          username: 'exampleuser',
+          password: '123456789'
+        }
+      };
+      
+      it('should login an existing user', (done) =>
+      {
+        request.post(
+        {
+          ...options,
+          followAllRedirects: true
+        }, 
+        (err, res, body) =>
+        {
+          expect(res.request.uri.href).toBe(`${base}/`);
+          expect(res.statusCode).toBe(200);
+          done();
+        });
+      });
+
+      it('should successfully redirect after user login', (done) =>
+      {
+        request.post(options, (err, res, body) =>
+        {
+          expect(res.statusCode).toBe(302);
+          done();
+        });
+      });
+    });
+
+    describe('with invalid user information', () =>
+    {
+      const options =
+      {
+        url: `${userBase}/sign_in`,
+        form:
+        {
+          username: 'exampleuser',
+          password: '123456789false'
+        }
+      };
+      
+      it('should not login', (done) =>
+      {
+        request.post(
+        {
+          ...options,
+          followAllRedirects: true
+        }, (err, res, body) =>
+        {
+          expect(res.request.uri.href).toBe(`${userBase}/sign_in`);
+          done();
+        });
+      });
+
+      it('should redirect after failed login', (done) =>
+      {
+        request.post(options, (err, res, body) =>
+        {
+          expect(res.statusCode).toBe(302);
           done();
         });
       });
