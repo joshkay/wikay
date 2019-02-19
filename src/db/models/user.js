@@ -21,6 +21,20 @@ module.exports = (sequelize, DataTypes) => {
   }, {});
   User.associate = function(models) {
     // associations can be defined here
+    User.hasMany(models.Wiki, {
+      foreignKey: 'userId',
+      as: 'wikis'
+    });
   };
+
+  User.prototype.isOwner = function(wiki)
+  {
+    if (wiki && wiki.userId)
+    {
+      return wiki.userId === this.id;
+    }
+    return false;
+  };
+
   return User;
 };

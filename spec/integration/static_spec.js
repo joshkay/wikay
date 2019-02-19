@@ -7,7 +7,7 @@ const authBase = `${base}/auth/fake`;
 
 describe('routes : static', () =>
 {
-  describe('guest user performing', () =>
+  describe('guest', () =>
   {
     beforeEach((done) =>
     {
@@ -58,7 +58,7 @@ describe('routes : static', () =>
     });
   });
 
-  describe('member performing', () =>
+  describe('member', () =>
   {
     beforeEach((done) =>
     {
