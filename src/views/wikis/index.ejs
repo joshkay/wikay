@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <% include ../static/partials/head.ejs %>
+  </head>
+  <body>
+
+    <% include ../static/partials/navbar.ejs %>
+
+    <main class="container">
+
+      <% include ../static/partials/messages.ejs %>
+
+      <% if (wikis) { %>
+        <h1>Wikis</h1>
+
+        <hr>
+
+        <ul class="list-unstyled">
+          <% wikis.forEach((wiki) => { %>
+            <li>
+              <a href="/wiki/<%= wiki.slug %> %>">
+                <%= wiki.title %>
+              </a>
+            </li>
+          <% }) %>
+        </ul>        
+      <% } %>
+
+      <% if (user) { %>
+        <a href="/wiki/new" class="btn btn-primary btn-lg">New Wiki</a>
+      <% } %>
+    </main>
+
+    <% include ../static/partials/baseScripts.ejs %>
+
+  </body>
+</html>

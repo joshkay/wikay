@@ -35,10 +35,14 @@ module.exports =
       const mockAuth = require('../../spec/support/mock-auth');
       mockAuth.fakeIt(app);
     }
+
     app.use((req, res, next) =>
     {
       res.locals.user = req.user;
-      next();
+      if (next)
+      {
+        next();
+      }
     });
 
     sendgrid.setApiKey(process.env.SENDGRID_API_KEY);

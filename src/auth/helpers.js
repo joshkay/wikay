@@ -1,12 +1,16 @@
 const bcrypt = require('bcryptjs');
 
+const AUTH_MESSAGE = 'You must be signed in to do that.';
+
 module.exports =
 {
+  AUTH_MESSAGE,
   ensureAuthenticated(req, res, next)
   {
     if (!req.user)
     {
-      req.flash('notice', 'You must be signed in to do that.');
+      console.log('auth failed');
+      req.flash('notice', AUTH_MESSAGE);
       return res.redirect('/users/sign_in');
     }
     else

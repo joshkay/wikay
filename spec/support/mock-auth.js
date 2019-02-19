@@ -1,3 +1,5 @@
+const User = require('../../src/db/models').User;
+
 module.exports = 
 {
   fakeIt(app)
@@ -12,11 +14,9 @@ module.exports =
 
       if (id && id != 0)
       {
-        req.user =
-        {
-          'id': id,
-          'username': username
-        };
+        req.user = new User();
+        req.user.id = parseInt(id);
+        req.user.username = username;
       }
       else if (id == 0)
       {
