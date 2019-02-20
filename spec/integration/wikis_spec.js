@@ -286,7 +286,7 @@ describe('routes : wikis', () =>
     });
   });
 
-  describe('member (not creator)', () =>
+  describe('standard user (not wiki creator)', () =>
   {
     beforeEach((done) =>
     {
@@ -333,24 +333,17 @@ describe('routes : wikis', () =>
 
     describe('GET /wiki/:id/edit', () =>
     {
-      it('should redirect to wikis view with an authorization notice', (done) =>
+      it('should render an edit view for the selected wiki', (done) =>
       {
-        const options =
+        request.get(`${wikiBase}/${this.wiki.slug}/edit`, (err, res, body) =>
         {
-          url: `${wikiBase}/${this.wiki.slug}/edit`,
-          jar: request.jar()
-        };
-
-        request.get(options, (err, res, body) =>
-        {
-          expect(res.request._redirect.redirects.length).toBe(1);
-          expect(res.request._redirect.redirects[0].statusCode).toBe(302);
-          expect(res.request._redirect.redirects[0].redirectUri).toBe(`${wikiBase}/${this.wiki.slug}`);
+          expect(res.statusCode).toBe(200);
+          expect(body).toContain('Edit Wiki');
+          expect(body).toContain(`/wiki/${this.wiki.slug}/update`);
+          expect(body).toContain('Title');
           expect(body).toContain(this.wiki.title);
+          expect(body).toContain('Body');
           expect(body).toContain(this.wiki.body);
-          expect(body).toContain(AUTHORIZATION_MESSAGE);
-          expect(body).not.toContain('Edit Wiki');
-          expect(body).not.toContain(`/wiki/${this.wiki.slug}/update`);
           done();
         });
       });
@@ -358,18 +351,15 @@ describe('routes : wikis', () =>
 
     describe('POST /wiki/:id/update', () =>
     {
-      it('should not update wiki and redirect to wikis page with auth error', (done) =>
+      it('should not update wiki with invalid values', (done) =>
       {
-        const newWikiTitle = 'Test Wiki Updated';
-        const newWikiBody = 'Test Long Test Wiki Body :) Test Long Test Wiki Body :) Test Long Test Wiki Body :) Test Long Test Wiki Body :) Test Long Test Wiki Body :) Test Long Test Wiki Body :)';
-
         const options =
         {
           url: `${wikiBase}/${this.wiki.slug}/update`,
           form:
           {
-            title: newWikiTitle,
-            body: newWikiBody
+            title: 'Test Wiki Update',
+            body: 'Long Test Wiki Updated Body :)',
           },
           headers:
           {
@@ -384,15 +374,57 @@ describe('routes : wikis', () =>
 
         request.post(options, (err, res, body) =>
         {
-          expect(body).toContain(AUTHORIZATION_MESSAGE);
-          expect(body).toContain(this.wiki.title);
-          expect(body).toContain(this.wiki.body);
+          expect(res.request.uri.href).toBe(`${wikiBase}/${this.wiki.slug}/edit`);
+          expect(body).toContain('Test Wiki Update');
+          expect(body).toContain('Long Test Wiki Updated Body :)');
+          expect(body).toContain('Validation error')
 
           Wiki.findByPk(this.wiki.id)
           .then((wiki) =>
           {
-            expect(wiki.title).toBe('Test Wiki');
-            expect(wiki.body).toBe('Long Test Wiki Body :)');
+            expect(wiki.title).toBe(this.wiki.title);
+            expect(wiki.body).toBe(this.wiki.body);
+            done();
+          })
+          .catch((err) =>
+          {
+            expect(err).toBeNull();
+            done();
+          });
+        });
+      });
+
+      it('should update wiki and redirect to the wiki page', (done) =>
+      {
+        const newWikiTitle = 'Test Wiki Updated';
+        const newWikiBody = 'Test Long Test Wiki Body :) Test Long Test Wiki Body :) Test Long Test Wiki Body :) Test Long Test Wiki Body :) Test Long Test Wiki Body :) Test Long Test Wiki Body :)';
+
+        const options =
+        {
+          url: `${wikiBase}/${this.wiki.slug}/update`,
+          form:
+          {
+            title: newWikiTitle,
+            body: newWikiBody
+          },
+          followAllRedirects: true,
+          jar: request.jar()
+        };
+
+        expect(this.wiki.title).toBe('Test Wiki');
+        expect(this.wiki.body).toBe('Long Test Wiki Body :)');
+
+        request.post(options, (err, res, body) =>
+        {
+          expect(res.request.uri.href).toBe(`${wikiBase}/${this.wiki.slug}`);
+          expect(body).toContain(newWikiTitle);
+          expect(body).toContain(newWikiBody);
+
+          Wiki.findByPk(this.wiki.id)
+          .then((wiki) =>
+          {
+            expect(wiki.title).toBe(newWikiTitle);
+            expect(wiki.body).toBe(newWikiBody);
             done();
           })
           .catch((err) =>
@@ -437,7 +469,7 @@ describe('routes : wikis', () =>
     });
   });
 
-  describe('member (creator)', () =>
+  describe('standard user (wiki creator)', () =>
   {
     beforeEach((done) =>
     {

@@ -34,8 +34,7 @@ module.exports = class ApplicationPolicy
   edit()
   {
     return this.new() &&
-      this.record && 
-      this._isOwner();
+      this.record;
   }
 
   update()
@@ -45,6 +44,7 @@ module.exports = class ApplicationPolicy
 
   destroy()
   {
-    return this.update();
+    return this.update() &&
+      this._isOwner();
   }
 };
