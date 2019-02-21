@@ -1,0 +1,13 @@
+<form action="/users/upgrade" method="POST">
+  <script
+    src="https://checkout.stripe.com/checkout.js" class="stripe-button"
+    data-key="<%= process.env.STRIPE_API_KEY %>"
+    data-amount="999"
+    data-name="joshkay.ca"
+    data-description="Premium User Upgrade"
+    data-image="https://stripe.com/img/documentation/checkout/marketplace.png"
+    data-locale="auto"
+    data-currency="cad"
+    data-zip-code="true">
+  </script>
+</form>
