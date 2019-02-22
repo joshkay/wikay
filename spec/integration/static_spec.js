@@ -1,55 +1,72 @@
 const request = require('request');
 const server = require('../../src/server');
+const sequelize = require('../../src/db/models/index').sequelize;
+const bcrypt = require('bcryptjs');
+
+const User = require('../../src/db/models').User;
 
 const app = require('../../src/app');
 const base = `http://localhost:${app.get('port')}`;
-const authBase = `${base}/auth/fake`;
+const loginUrl = `${base}/login`;
+const signupUrl = `${base}/signup`;
 
 describe('routes : static', () =>
 {
+  beforeEach((done) =>
+  {
+    sequelize.sync({force: true})
+    .then(() =>
+    {
+      done();
+    })
+    .catch((err) =>
+    {
+      console.log(err);
+      done();
+    });
+  })
+
   describe('guest', () =>
   {
     beforeEach((done) =>
     {
-      request.get({
-        url: authBase,
-        form:
-        {
-          userId: 0
-        }
-      }, (err, res, body) =>
-      {
-        done();
-      });
+      this.jar = request.jar();
+      done();
     });
 
     describe('GET /', () =>
     {
+      const options =
+      {
+        url: `${base}/`,
+        jar: this.jar
+      };
+
       it('should not render link to sign out', (done) =>
       {
-        request.get(`${base}/`, (err, res, body) =>
+        request.get(options, (err, res, body) =>
         {
           expect(body).not.toContain('Sign out');
-          expect(body).not.toContain('/users/sign_out');
+          expect(body).not.toContain('/logout');
           done();
         });
       });
 
       it('should render link to sign in and up', (done) =>
       {
-        request.get(`${base}/`, (err, res, body) =>
+        request.get(options, (err, res, body) =>
         {
           expect(body).toContain('Sign up');
-          expect(body).toContain('/users/sign_up');
+          expect(body).toContain('/signup');
           expect(body).toContain('Sign in');
-          expect(body).toContain('/users/sign_in');
+          expect(body).toContain('/login');
           done();
         });
       });
 
       it('should return status code 200', (done) =>
       {
-        request.get(`${base}/`, (err, res, body) =>
+        request.get(options, (err, res, body) =>
         {
           expect(res.statusCode).toBe(200);
           done();
@@ -62,16 +79,35 @@ describe('routes : static', () =>
   {
     beforeEach((done) =>
     {
-      request.get({
-        url: authBase,
-        form:
-        {
-          userId: 1,
-          username: 'testmember'
-        }
-      }, (err, res, body) =>
+      const salt = bcrypt.genSaltSync();
+
+      this.jar = request.jar();
+      this.userPassword = '123456789';
+
+      User.create({
+        username: 'loginuser',
+        email: 'loginuser@wiki.com',
+        password: bcrypt.hashSync(this.userPassword, salt)
+      })
+      .then((user) =>
       {
-        done();
+        this.user = user;
+
+        const options =
+        {
+          url: loginUrl,
+          form:
+          {
+            username: this.user.username,
+            password: this.userPassword
+          },
+          jar: this.jar
+        };
+        
+        request.post(options, (err, res, body) =>
+        {
+          done();
+        });
       });
     });
 
@@ -79,29 +115,47 @@ describe('routes : static', () =>
     {
       it('should not render link to sign in and sign up', (done) =>
       {
-        request.get(`${base}/`, (err, res, body) =>
+        const options =
+        {
+          url: `${base}/`,
+          jar: this.jar
+        };
+
+        request.get(options, (err, res, body) =>
         {
           expect(body).not.toContain('Sign in');
-          expect(body).not.toContain('/users/sign_in');
+          expect(body).not.toContain('/login');
           expect(body).not.toContain('Sign up');
-          expect(body).not.toContain('/users/sign_up');
+          expect(body).not.toContain('/signup');
           done();
         });
       });
 
       it('should render link to sign out', (done) =>
       {
-        request.get(`${base}/`, (err, res, body) =>
+        const options =
+        {
+          url: `${base}/`,
+          jar: this.jar
+        };
+
+        request.get(options, (err, res, body) =>
         {
           expect(body).toContain('Sign out');
-          expect(body).toContain('/users/sign_out');
+          expect(body).toContain('/logout');
           done();
         });
       });
 
       it('should return status code 200', (done) =>
       {
-        request.get(`${base}/`, (err, res, body) =>
+        const options =
+        {
+          url: `${base}/`,
+          jar: this.jar
+        };
+
+        request.get(options, (err, res, body) =>
         {
           expect(res.statusCode).toBe(200);
           done();

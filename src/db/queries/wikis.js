@@ -16,6 +16,18 @@ module.exports =
       callback(err);
     });
   },
+  getAllPublicWikis(callback)
+  {
+    return Wiki.scope(Wiki.SCOPE_PUBLIC).findAll()
+    .then((wikis) =>
+    {
+      callback(null, wikis);
+    })
+    .catch((err) =>
+    {
+      callback(err);
+    });
+  },
   addWiki(newWiki, callback)
   {
     return Wiki.create({

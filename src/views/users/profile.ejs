@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <% include ../static/partials/head.ejs %>
+  </head>
+  <body>
+
+    <% include ../static/partials/navbar.ejs %>
+
+    <main class="container">
+
+      <% include ../static/partials/messages.ejs %>
+      
+      <h1><%= user.username %></h1>
+      <p class="text-muted"><%= user.email %></p>
+      
+      <h3><%= user.getRoleText() %></h3>
+
+      <% if (user.isStandard()) { %>
+        <% if (user.upgraded) { %>
+          <form style="display:initial" action="/user/upgrade" method="post">
+            <button type="submit" class="btn btn-success">Free Upgrade to Premium</button>
+          </form>
+        <% } else { %>
+          <% include ../users/payment/upgrade.ejs %>
+        <% } %>
+      <% } else if (user.isPremium()) { %>
+        <p class="text-muted">Purchased for $<%= user.amountPaid / 100 %> on <%= new Date(user.datePaid).toLocaleDateString() %></p>
+
+        <form style="display:initial" action="/user/downgrade" method="post">
+          <button type="submit" class="btn btn-warning">Downgrade to Standard</button>
+        </form>
+      <% } %>
+
+      <h5>Joined on</h5>
+      <p><%= new Date(user.createdAt).toLocaleDateString() %></p>
+    
+    </main>
+    
+    <% include ../static/partials/baseScripts.ejs %>
+
+  </body>
+</html>

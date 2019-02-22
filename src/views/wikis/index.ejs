@@ -12,6 +12,11 @@
       <% include ../static/partials/messages.ejs %>
 
       <% if (wikis) { %>
+      
+        <% if (user && user.isStandard()) { %>
+          <% include ../users/payment/upgrade.ejs %>
+        <% } %>
+
         <h1>Wikis</h1>
 
         <hr>

@@ -1,13 +1,14 @@
 const passport = require('passport');
 const sendgrid = require('@sendgrid/mail');
 
+const User = require('../db/models').User;
 const userQueries = require('../db/queries/users');
 
 module.exports = 
 {
   signUp(req, res, next)
   {
-    res.render('users/sign_up');
+    res.render('users/signup');
   },
   create(req, res, next)
   {
@@ -48,7 +49,7 @@ module.exports =
   },
   signInForm(req, res, next)
   {
-    res.render('users/sign_in');
+    res.render('users/login');
   },
   signIn(req, res, next)
   {
@@ -83,7 +84,7 @@ module.exports =
         req.flash('notice', 'Sign in failed. Please try again.');
         req.flash('form', form);
 
-        res.redirect('/users/sign_in');
+        res.redirect('/login');
       }
     })(req, res, next);
   },
@@ -92,5 +93,124 @@ module.exports =
     req.logout();
     req.flash('notice', "You've successfully signed out!");
     res.redirect('/');
+  },
+  profile(req, res, next)
+  {
+    res.render('users/profile');
+  },
+  upgrade(req, res, next)
+  {
+    if (!req.user.isStandard())
+    {
+      req.flash('error', "Only Standard users can upgrade!");
+      res.redirect('back');
+    }
+    else if (req.user.upgraded)
+    {
+      // user has already been upgraded, upgrade for free
+      const userUpdates =
+      {
+        role: User.ROLE_PREMIUM
+      };
+
+      userQueries.updateUser(userUpdates, req.user, (err, user) =>
+      {
+        if (err || user == null)
+        {
+          req.flash('error', "Account upgrade failed!");
+        }
+        else
+        {
+          req.flash('notice', "Account upgraded to premium!");
+        }
+        res.redirect('back');
+      });
+    }
+    else
+    {
+      var stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
+      
+      const token = req.body.stripeToken;
+      
+      (async () => {
+        try {
+          const charge = await stripe.charges.create({
+            amount: Math.round(process.env.PREMIUM_PRICE * 100),
+            currency: 'cad',
+            description: 'Premium User Upgrade',
+            source: token,
+            receipt_email: req.body.stripeEmail
+          });
+
+          if (charge.failure_message != null)
+          {
+            req.flash('error', charge.failure_message);
+            res.redirect('back');
+          }
+          else if (!charge.paid)
+          {
+            req.flash('error', "Account upgrade failed!");
+            res.redirect('back');
+          }
+          else if (charge.paid)
+          {
+            const userUpdates =
+            {
+              role: User.ROLE_PREMIUM,
+              upgraded: true,
+              amountPaid: charge.amount,
+              datePaid: new Date()
+            };
+
+            userQueries.updateUser(userUpdates, req.user, (err, user) =>
+            {
+              if (err || user == null)
+              {
+                req.flash('error', "Account upgrade failed!");
+              }
+              else
+              {
+                req.flash('notice', "Account upgraded to premium!");
+              }
+              res.redirect('back');
+            });
+          }
+        }
+        catch (err)
+        {
+          req.flash('error', err.message);
+          res.redirect('back');
+        }
+      })();
+    }
+  },
+  downgrade(req, res, next)
+  {
+    if (!req.user.isPremium())
+    {
+      req.flash('error', "Only Premium users can downgrade!");
+      res.redirect('back');
+    }
+    else
+    {
+      const userUpdates =
+      {
+        role: User.ROLE_STANDARD
+      };
+
+      userQueries.updateUser(userUpdates, req.user, (err, user) =>
+      {
+        if (err || user == null)
+        {
+          req.flash('error', "Account downgrade failed!");
+        }
+        else
+        {
+          req.flash('notice', "Account downgraded to standard!");
+        }
+
+        res.redirect('back');
+      });
+    }
   }
 };

@@ -22,6 +22,20 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.INTEGER,
       allowNull: false,
       defaultValue: 0
+    },
+    upgraded: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false
+    },
+    amountPaid: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 0
+    },
+    datePaid: {
+      type: DataTypes.DATE,
+      allowNull: true
     }
   }, {});
   User.associate = function(models) {
@@ -56,6 +70,23 @@ module.exports = (sequelize, DataTypes) => {
   User.prototype.isAdmin = function()
   {
     return this.role === User.ROLE_ADMIN;
+  }
+
+  User.getRoleText = function(role)
+  {
+    switch (role)
+    {
+      case User.ROLE_STANDARD:
+        return 'Standard User';
+      case User.ROLE_PREMIUM:
+        return 'Premium User';
+      case User.ROLE_ADMIN:
+        return 'Admin User';
+    }
+  }
+  User.prototype.getRoleText = function()
+  {
+    return User.getRoleText(this.role);
   }
 
   return User;
