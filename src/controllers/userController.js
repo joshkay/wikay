@@ -8,7 +8,7 @@ module.exports =
 {
   signUp(req, res, next)
   {
-    res.render('users/sign_up');
+    res.render('users/signup');
   },
   create(req, res, next)
   {
@@ -49,7 +49,7 @@ module.exports =
   },
   signInForm(req, res, next)
   {
-    res.render('users/sign_in');
+    res.render('users/login');
   },
   signIn(req, res, next)
   {
@@ -84,7 +84,7 @@ module.exports =
         req.flash('notice', 'Sign in failed. Please try again.');
         req.flash('form', form);
 
-        res.redirect('/users/sign_in');
+        res.redirect('/login');
       }
     })(req, res, next);
   },
@@ -100,47 +100,117 @@ module.exports =
   },
   upgrade(req, res, next)
   {
-    // Set your secret key: remember to change this to your live secret key in production
-    // See your keys here: https://dashboard.stripe.com/account/apikeys
-    var stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
+    if (!req.user.isStandard())
+    {
+      req.flash('error', "Only Standard users can upgrade!");
+      res.redirect('back');
+    }
+    else if (req.user.upgraded)
+    {
+      // user has already been upgraded, upgrade for free
+      const userUpdates =
+      {
+        role: User.ROLE_PREMIUM
+      };
 
-    // Token is created using Checkout or Elements!
-    // Get the payment token ID submitted by the form:
-    const token = req.body.stripeToken; // Using Express
-    
-    (async () => {
-      const charge = await stripe.charges.create({
-        amount: Math.round(process.env.PREMIUM_PRICE * 100),
-        currency: 'cad',
-        description: 'Premium User Upgrade',
-        source: token,
-        receipt_email: req.body.stripeEmail
-      });
-
-      if (charge.failure_message != null)
+      userQueries.updateUser(userUpdates, req.user, (err, user) =>
       {
-        req.flash('errors', charge.failure_message);
-      }
-      else if (!charge.paid)
-      {
-        req.flash('errors', "Account upgrade failed!");
-      }
-      else if (charge.paid)
-      {
-        userQueries.updateUser({role: User.ROLE_PREMIUM}, req.user, (err, user) =>
+        if (err || user == null)
         {
-          if (err || user == null)
-          {
-            req.flash('errors', "Account upgrade failed!");
-          }
-          else
-          {
-            req.flash('notice', "Account upgraded to premium!");
-          }
-        });
-      }
+          req.flash('error', "Account upgrade failed!");
+        }
+        else
+        {
+          req.flash('notice', "Account upgraded to premium!");
+        }
+        res.redirect('back');
+      });
+    }
+    else
+    {
+      var stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
       
-      res.redirect('/wikis');
-    })();
+      const token = req.body.stripeToken;
+      
+      (async () => {
+        try {
+          const charge = await stripe.charges.create({
+            amount: Math.round(process.env.PREMIUM_PRICE * 100),
+            currency: 'cad',
+            description: 'Premium User Upgrade',
+            source: token,
+            receipt_email: req.body.stripeEmail
+          });
+
+          if (charge.failure_message != null)
+          {
+            req.flash('error', charge.failure_message);
+            res.redirect('back');
+          }
+          else if (!charge.paid)
+          {
+            req.flash('error', "Account upgrade failed!");
+            res.redirect('back');
+          }
+          else if (charge.paid)
+          {
+            const userUpdates =
+            {
+              role: User.ROLE_PREMIUM,
+              upgraded: true,
+              amountPaid: charge.amount,
+              datePaid: new Date()
+            };
+
+            userQueries.updateUser(userUpdates, req.user, (err, user) =>
+            {
+              if (err || user == null)
+              {
+                req.flash('error', "Account upgrade failed!");
+              }
+              else
+              {
+                req.flash('notice', "Account upgraded to premium!");
+              }
+              res.redirect('back');
+            });
+          }
+        }
+        catch (err)
+        {
+          req.flash('error', err.message);
+          res.redirect('back');
+        }
+      })();
+    }
+  },
+  downgrade(req, res, next)
+  {
+    if (!req.user.isPremium())
+    {
+      req.flash('error', "Only Premium users can downgrade!");
+      res.redirect('back');
+    }
+    else
+    {
+      const userUpdates =
+      {
+        role: User.ROLE_STANDARD
+      };
+
+      userQueries.updateUser(userUpdates, req.user, (err, user) =>
+      {
+        if (err || user == null)
+        {
+          req.flash('error', "Account downgrade failed!");
+        }
+        else
+        {
+          req.flash('notice', "Account downgraded to standard!");
+        }
+
+        res.redirect('back');
+      });
+    }
   }
 };

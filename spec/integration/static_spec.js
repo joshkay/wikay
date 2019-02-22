@@ -7,7 +7,8 @@ const User = require('../../src/db/models').User;
 
 const app = require('../../src/app');
 const base = `http://localhost:${app.get('port')}`;
-const loginUrl = `${base}/users/sign_in`;
+const loginUrl = `${base}/login`;
+const signupUrl = `${base}/signup`;
 
 describe('routes : static', () =>
 {
@@ -46,7 +47,7 @@ describe('routes : static', () =>
         request.get(options, (err, res, body) =>
         {
           expect(body).not.toContain('Sign out');
-          expect(body).not.toContain('/users/sign_out');
+          expect(body).not.toContain('/logout');
           done();
         });
       });
@@ -56,9 +57,9 @@ describe('routes : static', () =>
         request.get(options, (err, res, body) =>
         {
           expect(body).toContain('Sign up');
-          expect(body).toContain('/users/sign_up');
+          expect(body).toContain('/signup');
           expect(body).toContain('Sign in');
-          expect(body).toContain('/users/sign_in');
+          expect(body).toContain('/login');
           done();
         });
       });
@@ -123,9 +124,9 @@ describe('routes : static', () =>
         request.get(options, (err, res, body) =>
         {
           expect(body).not.toContain('Sign in');
-          expect(body).not.toContain('/users/sign_in');
+          expect(body).not.toContain('/login');
           expect(body).not.toContain('Sign up');
-          expect(body).not.toContain('/users/sign_up');
+          expect(body).not.toContain('/signup');
           done();
         });
       });
@@ -141,7 +142,7 @@ describe('routes : static', () =>
         request.get(options, (err, res, body) =>
         {
           expect(body).toContain('Sign out');
-          expect(body).toContain('/users/sign_out');
+          expect(body).toContain('/logout');
           done();
         });
       });

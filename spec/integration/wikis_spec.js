@@ -9,9 +9,10 @@ const Wiki = require('../../src/db/models').Wiki;
 
 const app = require('../../src/app');
 const base = `http://localhost:${app.get('port')}`;
+
 const wikiBase = `${base}/wiki`;
-const loginUrl = `${base}/users/sign_in`;
-const logoutUrl = `${base}/users/sign_out`;
+const loginUrl = `${base}/login`;
+const logoutUrl = `${base}/logout`;
 
 const AUTH_MESSAGE = require('../../src/auth/helpers').AUTH_MESSAGE;
 const AUTHORIZATION_MESSAGE = require('../../src/policies/helpers').AUTHORIZATION_MESSAGE;

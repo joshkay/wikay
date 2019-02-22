@@ -10,7 +10,7 @@ module.exports =
     if (!req.user)
     {
       req.flash('notice', AUTH_MESSAGE);
-      return res.redirect('/users/sign_in');
+      return res.redirect('/login');
     }
     else
     {

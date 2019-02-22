@@ -1,5 +1,5 @@
-<% if (messages.errors || messages.notice) { %>
-  <div class="alert alert-<%= messages.errors ? 'danger' : 'warning' %> alert-dismissible fade show" role="alert">
+<% if (messages.error || messages.errors || messages.notice) { %>
+  <div class="alert alert-<%= (messages.error || messages.errors) ? 'danger' : 'warning' %> alert-dismissible fade show" role="alert">
     <a href="#" class="close" data-dismiss="alert" aria-label="close">&times;</a>
 
     <% if (messages.errors) { %>
@@ -16,6 +16,8 @@
         </li>
       <% }) %>
     </ul>
+    <% } else if (messages.error) { %>
+      <p><%= messages.error %></p>
     <% } else { %>
       <p><%= messages.notice %></p>
     <% } %>

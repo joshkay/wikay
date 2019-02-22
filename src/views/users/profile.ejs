@@ -17,7 +17,19 @@
       <h3><%= user.getRoleText() %></h3>
 
       <% if (user.isStandard()) { %>
-        <% include ../users/payment/upgrade.ejs %>
+        <% if (user.upgraded) { %>
+          <form style="display:initial" action="/user/upgrade" method="post">
+            <button type="submit" class="btn btn-success">Free Upgrade to Premium</button>
+          </form>
+        <% } else { %>
+          <% include ../users/payment/upgrade.ejs %>
+        <% } %>
+      <% } else if (user.isPremium()) { %>
+        <p class="text-muted">Purchased for $<%= user.amountPaid / 100 %> on <%= new Date(user.datePaid).toLocaleDateString() %></p>
+
+        <form style="display:initial" action="/user/downgrade" method="post">
+          <button type="submit" class="btn btn-warning">Downgrade to Standard</button>
+        </form>
       <% } %>
 
       <h5>Joined on</h5>
