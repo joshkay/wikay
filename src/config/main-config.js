@@ -30,12 +30,6 @@ module.exports =
     
     passportConfig.init(app);
 
-    if (process.env.NODE_ENV === 'test')
-    {
-      const mockAuth = require('../../spec/support/mock-auth');
-      mockAuth.fakeIt(app);
-    }
-
     app.use((req, res, next) =>
     {
       res.locals.user = req.user;

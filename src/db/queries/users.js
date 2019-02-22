@@ -22,5 +22,20 @@ module.exports =
     {
       callback(err);
     });
+  },
+  updateUser(updatedUser, user, callback)
+  {
+    return user.update(
+      updatedUser,
+      {fields: Object.keys(updatedUser)}
+    )
+    .then((wiki) =>
+    {
+      callback(null, user);
+    })
+    .catch((err) =>
+    {
+      callback(err);
+    });
   }
 }

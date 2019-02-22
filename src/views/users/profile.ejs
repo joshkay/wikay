@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <% include ../static/partials/head.ejs %>
+  </head>
+  <body>
+
+    <% include ../static/partials/navbar.ejs %>
+
+    <main class="container">
+
+      <% include ../static/partials/messages.ejs %>
+      
+      <h1><%= user.username %></h1>
+      <p class="text-muted"><%= user.email %></p>
+      
+      <h3><%= user.getRoleText() %></h3>
+
+      <% if (user.isStandard()) { %>
+        <% include ../users/payment/upgrade.ejs %>
+      <% } %>
+
+      <h5>Joined on</h5>
+      <p><%= new Date(user.createdAt).toLocaleDateString() %></p>
+    
+    </main>
+    
+    <% include ../static/partials/baseScripts.ejs %>
+
+  </body>
+</html>

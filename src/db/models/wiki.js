@@ -32,6 +32,15 @@ module.exports = (sequelize, DataTypes) => {
       as: 'user',
       onDelete: 'CASCADE'
     });
+
+    Wiki.SCOPE_PUBLIC = 'public';
+    Wiki.addScope(Wiki.SCOPE_PUBLIC, () =>
+    {
+      return {
+        where: { private: false },
+        order: [['createdAt', 'DESC']]
+      };
+    });
   };
   return Wiki;
 };

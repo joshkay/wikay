@@ -1,0 +1,9 @@
+<div class="card">
+  <h5 class="card-header">Upgrade to Premium</h5>
+  <div class="card-body">
+    <h5 class="card-title">Only $<%= process.env.PREMIUM_PRICE %>!</h5>
+    <p class="card-text">Unlock the ability to create private wikis and be able to control who can edit them.</p>
+
+    <% include ./stripe.ejs %>
+  </div>
+</div>

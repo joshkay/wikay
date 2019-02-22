@@ -1,12 +1,18 @@
 const request = require('request');
 const server = require('../../src/server');
 const sequelize = require('../../src/db/models/index').sequelize;
+const bcrypt = require('bcryptjs');
 
 const User = require('../../src/db/models').User;
 
 const app = require('../../src/app');
 const base = `http://localhost:${app.get('port')}`;
 const userBase = `${base}/users`;
+const profileBase = `${base}/profile`;
+const loginUrl = `${base}/users/sign_in`;
+const logoutUrl = `${base}/users/sign_out`;
+
+const AUTH_MESSAGE = require('../../src/auth/helpers').AUTH_MESSAGE;
 
 describe('routes : users', () =>
 {
@@ -409,6 +415,214 @@ describe('routes : users', () =>
         request.post(options, (err, res, body) =>
         {
           expect(res.statusCode).toBe(302);
+          done();
+        });
+      });
+    });
+  });
+
+  describe('guest', () =>
+  {
+    beforeEach((done) =>
+    {
+      this.jar = request.jar();
+      done();
+    });
+    
+    describe('GET /profile', () =>
+    {
+      it("should redirect to login page", (done) =>
+      {
+        const options =
+        {
+          url: profileBase,
+          jar: this.jar
+        };
+
+        request.get(options, (err, res, body) =>
+        {
+          expect(res.request.uri.href).toBe(`${userBase}/sign_in`);
+          expect(body).toContain(AUTH_MESSAGE);
+          done();
+        });
+      });
+    });
+  });
+
+  describe('standard user', () =>
+  {
+    beforeEach((done) =>
+    {
+      const salt = bcrypt.genSaltSync();
+
+      this.jar = request.jar();
+      this.userPassword = '123456789';
+
+      User.create({
+        username: 'loginuser',
+        email: 'loginuser@wiki.com',
+        password: bcrypt.hashSync(this.userPassword, salt),
+        role: User.ROLE_STANDARD
+      })
+      .then((user) =>
+      {
+        this.user = user;
+
+        const options =
+        {
+          url: `${userBase}/sign_in`,
+          form:
+          {
+            username: this.user.username,
+            password: this.userPassword
+          },
+          jar: this.jar
+        };
+        
+        request.post(options, (err, res, body) =>
+        {
+          done();
+        });
+      });
+    });
+    
+    describe('GET /profile', () =>
+    {
+      it("should show the user's profile page with standard role and display upgrade prompt", (done) =>
+      {
+        const options =
+        {
+          url: profileBase,
+          jar: this.jar
+        };
+
+        request.get(options, (err, res, body) =>
+        {
+          expect(res.statusCode).toBe(200);
+          expect(body).toContain(this.user.username);
+          expect(body).toContain(this.user.email);
+          expect(body).toContain(User.getRoleText(User.ROLE_STANDARD));
+          expect(body).toContain('Upgrade to Premium');
+          done();
+        });
+      });
+    });
+  });
+
+  describe('premium user', () =>
+  {
+    beforeEach((done) =>
+    {
+      const salt = bcrypt.genSaltSync();
+
+      this.jar = request.jar();
+      this.userPassword = '123456789';
+
+      User.create({
+        username: 'loginuser',
+        email: 'loginuser@wiki.com',
+        password: bcrypt.hashSync(this.userPassword, salt),
+        role: User.ROLE_PREMIUM
+      })
+      .then((user) =>
+      {
+        this.user = user;
+
+        const options =
+        {
+          url: `${userBase}/sign_in`,
+          form:
+          {
+            username: this.user.username,
+            password: this.userPassword
+          },
+          jar: this.jar
+        };
+        
+        request.post(options, (err, res, body) =>
+        {
+          done();
+        });
+      });
+    });
+    
+    describe('GET /profile', () =>
+    {
+      it("should show the user's profile page with premium role and not prompt user to upgrade", (done) =>
+      {
+        const options =
+        {
+          url: profileBase,
+          jar: this.jar
+        };
+
+        request.get(options, (err, res, body) =>
+        {
+          expect(res.statusCode).toBe(200);
+          expect(body).toContain(this.user.username);
+          expect(body).toContain(this.user.email);
+          expect(body).toContain(User.getRoleText(User.ROLE_PREMIUM));
+          expect(body).not.toContain('Upgrade to Premium');
+          done();
+        });
+      });
+    });
+  });
+
+  describe('admin user', () =>
+  {
+    beforeEach((done) =>
+    {
+      const salt = bcrypt.genSaltSync();
+
+      this.jar = request.jar();
+      this.userPassword = '123456789';
+
+      User.create({
+        username: 'loginuser',
+        email: 'loginuser@wiki.com',
+        password: bcrypt.hashSync(this.userPassword, salt),
+        role: User.ROLE_ADMIN
+      })
+      .then((user) =>
+      {
+        this.user = user;
+
+        const options =
+        {
+          url: `${userBase}/sign_in`,
+          form:
+          {
+            username: this.user.username,
+            password: this.userPassword
+          },
+          jar: this.jar
+        };
+        
+        request.post(options, (err, res, body) =>
+        {
+          done();
+        });
+      });
+    });
+    
+    describe('GET /profile', () =>
+    {
+      it("should show the user's profile page with admin role and not prompt user to upgrade", (done) =>
+      {
+        const options =
+        {
+          url: profileBase,
+          jar: this.jar
+        };
+
+        request.get(options, (err, res, body) =>
+        {
+          expect(res.statusCode).toBe(200);
+          expect(body).toContain(this.user.username);
+          expect(body).toContain(this.user.email);
+          expect(body).toContain(User.getRoleText(User.ROLE_ADMIN));
+          expect(body).not.toContain('Upgrade to Premium');
           done();
         });
       });

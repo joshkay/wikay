@@ -2,12 +2,20 @@
   <script
     src="https://checkout.stripe.com/checkout.js" class="stripe-button"
     data-key="<%= process.env.STRIPE_API_KEY %>"
-    data-amount="999"
-    data-name="joshkay.ca"
+    data-amount="<%= process.env.PREMIUM_PRICE %>"
+    data-name="<%= process.env.SITE_NAME %>"
+    data-label="Upgrade"
     data-description="Premium User Upgrade"
     data-image="https://stripe.com/img/documentation/checkout/marketplace.png"
     data-locale="auto"
     data-currency="cad"
     data-zip-code="true">
   </script>
+  <script>
+      // Hide default stripe button, be careful there if you
+      // have more than 1 button of that class
+      let element = document.getElementsByClassName("stripe-button-el")[0];
+      element.parentNode.removeChild(element);
+  </script>
+  <button type="submit" class="btn btn-primary">Purchase Upgrade</button>
 </form>
