@@ -11,15 +11,20 @@
 
       <% include ../static/partials/messages.ejs %>
 
-      <h1><%= wiki.title %></h1>
+      <div class="d-flex justify-content-between align-items-center">
+        <h1><%= wiki.title %></h1>
+        <% if (wiki.private) { %>
+          <span class="badge badge-primary badge-pill">Private</span>
+        <% } %>
+      </div>
       
       <p><%= wiki.body %></p>
       
-      <% if (user) { %>
+      <% if (policy.edit()) { %>
         <a href="/wiki/<%= wiki.slug %>/edit" class="btn btn-warning">Edit</a>
       <% } %>
 
-      <% if (user && user.isOwner(wiki)) { %>
+      <% if (policy.destroy()) { %>
         <form style="display:initial" action="/wiki/<%= wiki.slug %>/destroy" method="post">
           <button type="submit" class="btn btn-danger">Delete</button>
         </form>

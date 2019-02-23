@@ -1,9 +1,11 @@
 const request = require('request');
 const server = require('../../src/server');
 const sequelize = require('../../src/db/models/index').sequelize;
+const slugify = require('slugify');
 const bcrypt = require('bcryptjs');
 
 const User = require('../../src/db/models').User;
+const Wiki = require('../../src/db/models').Wiki;
 
 const app = require('../../src/app');
 const base = `http://localhost:${app.get('port')}`;
@@ -717,6 +719,21 @@ describe('routes : users', () =>
           done();
         });
       });
+
+      it("should show a downgrade warning", (done) =>
+      {
+        const options =
+        {
+          url: profileUrl,
+          jar: this.jar
+        };
+
+        request.get(options, (err, res, body) =>
+        {
+          expect(body).toContain('Downgrading to standard will make all of your private wikis public!');
+          done();
+        });
+      });
     });
 
     describe('POST /user/upgrade', () =>
@@ -784,6 +801,67 @@ describe('routes : users', () =>
             done();
           });
         });
+      });
+
+      it("should make all of user's private wikis public", (done) =>
+      {
+        (async () =>
+        {
+          const wiki1Title = 'Test Wiki 1';
+          this.wiki1 = await Wiki.create({
+            title: wiki1Title,
+            body: 'Test Wiki 1 Body',
+            slug: slugify(wiki1Title),
+            userId: this.user.id
+          });
+  
+          const wikiPrivate1Title = 'Test P Wiki 1';
+          this.wikiPrivate1 = await Wiki.create({
+            title: wikiPrivate1Title,
+            body: 'Test P Wiki 1 Body',
+            slug: slugify(wikiPrivate1Title),
+            userId: this.user.id,
+            private: true
+          });
+
+          const options =
+          {
+            url: downgradeUrl,
+            jar: this.jar
+          };
+
+          const userWikis = await Wiki.findAll({ 
+            where: 
+            { 
+              userId: this.user.id
+            }
+          });
+          
+          const numUserWikis = userWikis.length;
+          const numUserPrivateWikis = userWikis.filter((wiki) => wiki.private).length;
+
+          request.post(options, (err, res, body) =>
+          {
+            (async () =>
+            {
+              const downgradedUserWikis = await Wiki.findAll({ 
+                where: 
+                { 
+                  userId: this.user.id
+                }
+              });
+              const numDowngradedUserWikis = downgradedUserWikis.length;
+              const numDowngradedUserPrivateWikis = downgradedUserWikis.filter((wiki) => wiki.private).length;
+              const numDowngradedUserPublicWikis = downgradedUserWikis.filter((wiki) => !wiki.private).length;
+
+              expect(numDowngradedUserWikis).toBe(numUserWikis);
+              expect(numDowngradedUserPrivateWikis).toBe(0);
+              expect(numDowngradedUserPublicWikis).toBe(numUserWikis);
+
+              done();
+            })();
+          });
+        })();
       });
     });
   });

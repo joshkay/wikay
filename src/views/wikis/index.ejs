@@ -11,40 +11,36 @@
 
       <% include ../static/partials/messages.ejs %>
 
-      <% if (user && user.isStandard()) { %>
-        <% include ../users/payment/upgrade.ejs %>
+      <% if (user && !user.upgraded && user.isStandard()) { %>
+        <% include ../users/partials/payment/upgrade.ejs %>
       <% } %>
 
       <% if (userWikis) { %>
         <h1>Your Wikis</h1>
 
-        <hr>
-
-        <ul class="list-unstyled">
+        <div class="list-group">
           <% userWikis.forEach((wiki) => { %>
-            <li>
-              <a href="/wiki/<%= wiki.slug %> %>">
-                <%= wiki.title %>
-              </a>
-            </li>
+            <a href="/wiki/<%= wiki.slug %> %>" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+              <%= wiki.title %>
+
+              <% if (wiki.private) { %>
+                <span class="badge badge-primary badge-pill">Private</span>
+              <% } %>
+            </a>
           <% }) %>
-        </ul>        
+        </div>        
       <% } %>
 
       <% if (publicWikis) { %>
         <h1>Wikis</h1>
 
-        <hr>
-
-        <ul class="list-unstyled">
+        <div class="list-group">
           <% publicWikis.forEach((wiki) => { %>
-            <li>
-              <a href="/wiki/<%= wiki.slug %> %>">
-                <%= wiki.title %>
-              </a>
-            </li>
+            <a href="/wiki/<%= wiki.slug %> %>" class="list-group-item list-group-item-action">
+              <%= wiki.title %>
+            </a>
           <% }) %>
-        </ul>        
+        </div>        
       <% } %>
 
       <% if (user) { %>

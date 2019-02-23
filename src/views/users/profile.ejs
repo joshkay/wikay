@@ -22,21 +22,43 @@
             <button type="submit" class="btn btn-success">Free Upgrade to Premium</button>
           </form>
         <% } else { %>
-          <% include ../users/payment/upgrade.ejs %>
+          <% include ../users/partials/payment/upgrade.ejs %>
         <% } %>
       <% } else if (user.isPremium()) { %>
         <p class="text-muted">Purchased for $<%= user.amountPaid / 100 %> on <%= new Date(user.datePaid).toLocaleDateString() %></p>
 
-        <form style="display:initial" action="/user/downgrade" method="post">
-          <button type="submit" class="btn btn-warning">Downgrade to Standard</button>
-        </form>
+        <button type="button" class="btn btn-warning" data-toggle="modal" data-target="#downgradeModal">
+          Downgrade to Standard
+        </button>
+
+        <div class="modal fade" id="downgradeModal" tabindex="-1" role="dialog" aria-labelledby="downgradeModalLabel" aria-hidden="true">
+          <div class="modal-dialog" role="document">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title" id="downgradeModalLabel">Warning</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                  <span aria-hidden="true">&times;</span>
+                </button>
+              </div>
+              <div class="modal-body">
+                Downgrading to standard will make all of your private wikis public!
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                <form style="display:initial" action="/user/downgrade" method="post">
+                  <button type="submit" class="btn btn-warning">Downgrade to Standard</button>
+                </form>
+              </div>
+            </div>
+          </div>
+        </div>
       <% } %>
 
       <h5>Joined on</h5>
       <p><%= new Date(user.createdAt).toLocaleDateString() %></p>
     
     </main>
-    
+
     <% include ../static/partials/baseScripts.ejs %>
 
   </body>

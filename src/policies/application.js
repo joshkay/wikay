@@ -8,7 +8,12 @@ module.exports = class ApplicationPolicy
 
   _isOwner()
   {
-    return this.record && this.user.isOwner(this.record);
+    return this.record && this.user && this.user.isOwner(this.record);
+  }
+
+  _isAdmin()
+  {
+    return this.user && this.user.isAdmin();
   }
 
   new()
@@ -45,6 +50,6 @@ module.exports = class ApplicationPolicy
   destroy()
   {
     return this.update() &&
-      this._isOwner();
+      (this._isOwner() || this._isAdmin());
   }
 };

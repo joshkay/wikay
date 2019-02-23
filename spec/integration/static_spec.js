@@ -1,6 +1,7 @@
 const request = require('request');
 const server = require('../../src/server');
 const sequelize = require('../../src/db/models/index').sequelize;
+const slugify = require('slugify');
 const bcrypt = require('bcryptjs');
 
 const User = require('../../src/db/models').User;

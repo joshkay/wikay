@@ -13,18 +13,7 @@
       <h1>New Wiki</h1>
 
       <form action="/wiki/create" method="post">
-        <div class="form-group">
-          <label for="title">Title</label>
-          <input type="text" class="form-control" name="title" aria-describedby="titleHelp" placeholder="Enter Title"
-            value="<%= messages.form ? messages.form[0].title : '' %>" />
-          <small class="text-muted" id="titleHelp">title must be 3 or more characters in length.</small>
-        </div>
-        <div class="form-group">
-          <label for="body">Body</label>
-          <textarea rows="10" class="form-control" name="body" aria-describedby="bodyHelp" placeholder="Enter Body"><%= messages.form ? messages.form[0].body : '' %></textarea>
-          <small class="text-muted" id="bodyHelp">body must be 50 or more characters in length.</small>
-        </div>
-        <button type="submit" class="btn btn-primary">Submit</button>
+        <% include ./partials/createEditForm.ejs %>
       </form>
 
     </main>

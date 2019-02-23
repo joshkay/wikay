@@ -3,6 +3,7 @@ const sendgrid = require('@sendgrid/mail');
 
 const User = require('../db/models').User;
 const userQueries = require('../db/queries/users');
+const wikiQueries = require('../db/queries/wikis');
 
 module.exports = 
 {
@@ -203,13 +204,18 @@ module.exports =
         if (err || user == null)
         {
           req.flash('error', "Account downgrade failed!");
+          res.redirect('back');
         }
         else
         {
-          req.flash('notice', "Account downgraded to standard!");
-        }
+          (async () =>
+          {
+            await wikiQueries.updateUserWikisPublic(req.user);
 
-        res.redirect('back');
+            req.flash('notice', "Account downgraded to standard!");
+            res.redirect('back');
+          })();
+        }
       });
     }
   }

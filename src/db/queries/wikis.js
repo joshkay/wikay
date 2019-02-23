@@ -37,6 +37,7 @@ module.exports =
         replacement: '_',
         lower: true
       }),
+      private: newWiki.private,
       userId: newWiki.userId
     })
     .then((wiki) =>
@@ -75,6 +76,17 @@ module.exports =
     .catch((err) =>
     {
       callback(err);
+    });
+  },
+  updateUserWikisPublic(user)
+  {
+    return Wiki.update(
+    {
+      private: false
+    },
+    {
+      where: { userId: user.id },
+      fields: ['private']
     });
   },
   deleteWiki(wiki, callback)

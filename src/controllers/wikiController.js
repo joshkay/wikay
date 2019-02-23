@@ -3,7 +3,7 @@ const passport = require('passport');
 const wikiQueries = require('../db/queries/wikis');
 const Authorizer = require('../policies/wiki');
 
-const authHelpers = require('../policies/helpers');
+const policyHelpers = require('../policies/helpers');
 
 module.exports = 
 {
@@ -48,44 +48,50 @@ module.exports =
           }
 
           res.render('wikis/index', 
-            {
-              userWikis,
-              publicWikis
-            }
-          );
+          {
+            userWikis,
+            publicWikis
+          });
         }
       });
     }
     else
     {
-      authHelpers.handleFailed(req, res);
+      policyHelpers.handleFailed(req, res);
       res.redirect('/');
     }
   },
   new(req, res, next)
   {
-    const authorized = new Authorizer(req.user).new();
+    const authorizer = new Authorizer(req.user);
+    const authorized = authorizer.new();
 
     if (authorized)
     {
-      res.render('wikis/new');
+      res.render('wikis/new',
+      {
+        policy: authorizer
+      });
     }
     else
     {
-      authHelpers.handleFailed(req, res);
+      policyHelpers.handleFailed(req, res);
       res.redirect('/');
     }
   },
   create(req, res, next)
   {
-    const authorized = new Authorizer(req.user).create();
+    const authorizer = new Authorizer(req.user);
+    const authorized = authorizer.create();
 
     if (authorized)
     {
+      const private = authorizer.createPrivate() ? (req.body.private != undefined) : false;
       let newWiki =
       {
         title: req.body.title,
         body: req.body.body,
+        private: private,
         userId: req.user.id
       };
 
@@ -104,7 +110,7 @@ module.exports =
     }
     else
     {
-      authHelpers.handleFailed(req, res);
+      policyHelpers.handleFailed(req, res);
       res.redirect('/');
     }
   },
@@ -118,16 +124,21 @@ module.exports =
       }
       else
       {
-        const authorized = new Authorizer(req.user, wiki).show();
+        const authorizer = new Authorizer(req.user, wiki);
+        const authorized = authorizer.show();
 
         if (authorized)
         {
-          res.render('wikis/show', {wiki});
+          res.render('wikis/show',
+          {
+            wiki,
+            policy: authorizer
+          });
         }
         else
         {
-          authHelpers.handleFailed(req, res);
-          res.redirect('/');
+          policyHelpers.handleFailed(req, res);
+          return res.redirect('/wikis');
         }
       }
     });
@@ -142,15 +153,20 @@ module.exports =
       }
       else
       {
-        const authorized = new Authorizer(req.user, wiki).edit();
+        const authorizer = new Authorizer(req.user, wiki);
+        const authorized = authorizer.edit();
 
         if (authorized)
         {
-          res.render('wikis/edit', {wiki});
+          res.render('wikis/edit', 
+          {
+            wiki,
+            policy: authorizer
+          });
         }
         else
         {
-          authHelpers.handleFailed(req, res);
+          policyHelpers.handleFailed(req, res);
           res.redirect(`/wiki/${req.params.id}`);
         }
       }
@@ -166,14 +182,17 @@ module.exports =
       }
       else
       {
-        const authorized = new Authorizer(req.user, wiki).update();
+        const authorizer = new Authorizer(req.user, wiki);
+        const authorized = authorizer.update();
 
         if (authorized)
         {
+          const private = authorizer.updatePrivate() ? (req.body.private != undefined) : false;
           const updatedWikiData =
           {
             title: req.body.title,
-            body: req.body.body
+            body: req.body.body,
+            private: private
           };
 
           wikiQueries.updateWiki(updatedWikiData, wiki, (err, updatedWiki) =>
@@ -191,7 +210,7 @@ module.exports =
         }
         else
         {
-          authHelpers.handleFailed(req, res);
+          policyHelpers.handleFailed(req, res);
           res.redirect(`/wiki/${req.params.id}`);
         }
       }
@@ -226,7 +245,7 @@ module.exports =
         }
         else
         {
-          authHelpers.handleFailed(req, res);
+          policyHelpers.handleFailed(req, res);
           res.redirect(`/wiki/${req.params.id}`);
         }
       }
