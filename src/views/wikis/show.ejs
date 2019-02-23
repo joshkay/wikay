@@ -15,9 +15,11 @@
       
       <p><%= wiki.body %></p>
       
-      <% if (user && user.isOwner(wiki)) { %>
+      <% if (user) { %>
         <a href="/wiki/<%= wiki.slug %>/edit" class="btn btn-warning">Edit</a>
+      <% } %>
 
+      <% if (user && user.isOwner(wiki)) { %>
         <form style="display:initial" action="/wiki/<%= wiki.slug %>/destroy" method="post">
           <button type="submit" class="btn btn-danger">Delete</button>
         </form>

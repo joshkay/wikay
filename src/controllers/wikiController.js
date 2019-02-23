@@ -22,7 +22,37 @@ module.exports =
         }
         else
         {
-          res.render('wikis/index', {wikis});
+          let userWikis = null;
+          let publicWikis = null;
+
+          if (req.user)
+          {
+            // separate  wikis
+            userWikis = wikis.filter((wiki) =>
+            {
+              return wiki.userId === req.user.id;
+            });
+
+            publicWikis = wikis.filter((wiki) =>
+            {
+              return wiki.private === false &&
+                wiki.userId !== req.user.id;
+            });
+          }
+          else
+          {
+            publicWikis = wikis.filter((wiki) =>
+            {
+              return wiki.private === false;
+            });
+          }
+
+          res.render('wikis/index', 
+            {
+              userWikis,
+              publicWikis
+            }
+          );
         }
       });
     }

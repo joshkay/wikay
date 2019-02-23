@@ -11,18 +11,33 @@
 
       <% include ../static/partials/messages.ejs %>
 
-      <% if (wikis) { %>
-      
-        <% if (user && user.isStandard()) { %>
-          <% include ../users/payment/upgrade.ejs %>
-        <% } %>
+      <% if (user && user.isStandard()) { %>
+        <% include ../users/payment/upgrade.ejs %>
+      <% } %>
 
+      <% if (userWikis) { %>
+        <h1>Your Wikis</h1>
+
+        <hr>
+
+        <ul class="list-unstyled">
+          <% userWikis.forEach((wiki) => { %>
+            <li>
+              <a href="/wiki/<%= wiki.slug %> %>">
+                <%= wiki.title %>
+              </a>
+            </li>
+          <% }) %>
+        </ul>        
+      <% } %>
+
+      <% if (publicWikis) { %>
         <h1>Wikis</h1>
 
         <hr>
 
         <ul class="list-unstyled">
-          <% wikis.forEach((wiki) => { %>
+          <% publicWikis.forEach((wiki) => { %>
             <li>
               <a href="/wiki/<%= wiki.slug %> %>">
                 <%= wiki.title %>
