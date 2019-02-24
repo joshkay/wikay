@@ -1,20 +1,47 @@
-<div class="form-group">
-  <label for="title">Title</label>
-  <input type="text" class="form-control" id="title" name="title" aria-describedby="titleHelp" placeholder="Enter Title"
-    value="<%= messages.form ? messages.form[0].title : (locals.wiki ? wiki.title : '') %>" />
-  <small class="text-muted" id="titleHelp">title must be 3 or more characters in length.</small>
-</div>
-<div class="form-group">
-  <label for="body">Body</label>
-  <textarea rows="10" class="form-control" id="body" name="body" aria-describedby="bodyHelp" placeholder="Enter Body"><%= messages.form ? messages.form[0].body : (locals.wiki ? wiki.body : '') %></textarea>
-  <small class="text-muted" id="bodyHelp">body must be 50 or more characters in length.</small>
-</div>
+<div class="row">
+  <div class="col-6">
+    <div class="form-group">
+      <label for="title">Title</label>
+      <input type="text" class="form-control" id="title" name="title" aria-describedby="titleHelp"
+        placeholder="Enter Title" value="<%= messages.form ? messages.form[0].title : (locals.wiki ? wiki.title : '') %>" />
+      <small class="text-muted" id="titleHelp">title must be 3 or more characters in length.</small>
+    </div>
+    <div class="form-group">
+      <label for="body">Body</label>
+      <textarea rows="10" class="form-control" id="body" name="body" aria-describedby="bodyHelp" oninput="this.editor.update()"
+        placeholder="Enter Body"><%= messages.form ? messages.form[0].body : (locals.wiki ? wiki.body : '') %></textarea>
+      <small class="text-muted" id="bodyHelp">body must be 50 or more characters in length.</small>
+    </div>
 
-<% if (locals.wiki ? policy.updatePrivate() : policy.createPrivate()) { %>
-  <div class="form-check">
-    <input class="form-check-input" type="checkbox" <%= locals.wiki ? (wiki.private ? 'checked' : '') : '' %> id="private" name="private">
-    <label class="form-check-label" for="private">Private</label>
+    <% if (locals.wiki ? policy.updatePrivate() : policy.createPrivate()) { %>
+      <div class="form-check">
+        <input class="form-check-input" type="checkbox" <%= locals.wiki ? (wiki.private ? 'checked' : '') : '' %> id="private" name="private">
+        <label class="form-check-label" for="private">Private</label>
+      </div>
+    <% } %>
+    
+    <button type="submit" class="btn btn-primary">Submit</button>
   </div>
-<% } %>
-
-<button type="submit" class="btn btn-primary">Submit</button>
+  <div class="col-6">
+    <h1>Preview</h1>
+    <div id="preview">
+      <% if (locals.wiki) { %>
+        <%- wiki.bodyMarkdown %>
+      <% } %>
+    </div>
+    
+    <script src="/scripts/markdown.js"></script> 
+    <script>
+      function Editor(input, preview) 
+      {
+        this.update = function () {
+          preview.innerHTML = markdown.toHTML(input.value);
+        };
+        input.editor = this;
+        this.update();
+      }
+      var $ = function (id) { return document.getElementById(id); };
+      new Editor($("body"), $("preview"));
+    </script> 
+  </div>
+</div>

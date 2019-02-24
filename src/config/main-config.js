@@ -42,5 +42,6 @@ module.exports =
     sendgrid.setApiKey(process.env.SENDGRID_API_KEY);
     
     app.use(express.static(path.join(__dirname, '..', 'assets')));
+    app.use('/scripts', express.static(path.join(__dirname, '../../node_modules/markdown/lib/')));
   }
 };

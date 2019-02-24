@@ -2,6 +2,7 @@ const request = require('request');
 const server = require('../../src/server');
 const sequelize = require('../../src/db/models/index').sequelize;
 const slugify = require('slugify');
+const markdown = require('markdown').markdown;
 const bcrypt = require('bcryptjs');
 
 const User = require('../../src/db/models').User;
@@ -549,6 +550,21 @@ describe('routes : wikis', () =>
           done();
         });
       });
+
+      it('should show a preview window', (done) =>
+      {
+        const options = 
+        {
+          url: `${wikiBase}/new`,
+          jar: this.jar
+        };
+        
+        request.get(options, (err, res, body) =>
+        {
+          expect(res.body).toContain('Preview');
+          done();
+        });
+      });
     });
 
     describe('GET /wiki/:id', () =>
@@ -575,6 +591,30 @@ describe('routes : wikis', () =>
             expect(body).toContain(`/wiki/${this.wiki1.slug}/destroy`);
             done();
           });
+        });
+
+        it('should show the body contents as html', (done) =>
+        {
+          (async () =>
+          {
+            this.wiki1 = await this.wiki1.update(
+              { body: '#Test Header\n' + this.wiki1.body },
+              { fields: ['body'] }
+            );
+
+            const options = 
+            {
+              url: `${wikiBase}/${this.wiki1.slug}`,
+              jar: this.jar
+            };
+            
+            request.get(options, (err, res, body) =>
+            {
+              expect(res.body).not.toContain(this.wiki1.body);
+              expect(res.body).toContain(markdown.toHTML(this.wiki1.body));
+              done();
+            });
+          })();
         });
       });
 
@@ -645,6 +685,31 @@ describe('routes : wikis', () =>
             expect(body).not.toContain('Private');
             done();
           });
+        });
+
+        it('should show the body contents as markdown plain text and a preview as html', (done) =>
+        {
+          (async () =>
+          {
+            this.wiki1 = await this.wiki1.update(
+              { body: '#Test Header\n' + this.wiki1.body },
+              { fields: ['body'] }
+            );
+
+            const options = 
+            {
+              url: `${wikiBase}/${this.wiki1.slug}/edit`,
+              jar: this.jar
+            };
+            
+            request.get(options, (err, res, body) =>
+            {
+              expect(body).toContain(this.wiki1.body);
+              expect(body).toContain('Preview');
+              expect(body).toContain(markdown.toHTML(this.wiki1.body));
+              done();
+            });
+          })();
         });
       });
 

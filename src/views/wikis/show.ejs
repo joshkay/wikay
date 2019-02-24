@@ -17,8 +17,8 @@
           <span class="badge badge-primary badge-pill">Private</span>
         <% } %>
       </div>
-      
-      <p><%= wiki.body %></p>
+
+      <%- wiki.body %>
       
       <% if (policy.edit()) { %>
         <a href="/wiki/<%= wiki.slug %>/edit" class="btn btn-warning">Edit</a>

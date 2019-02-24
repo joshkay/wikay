@@ -1,4 +1,5 @@
 const passport = require('passport');
+const markdown = require('markdown').markdown;
 
 const wikiQueries = require('../db/queries/wikis');
 const Authorizer = require('../policies/wiki');
@@ -129,6 +130,8 @@ module.exports =
 
         if (authorized)
         {
+          wiki.body = markdown.toHTML(wiki.body);
+
           res.render('wikis/show',
           {
             wiki,
@@ -158,6 +161,8 @@ module.exports =
 
         if (authorized)
         {
+          wiki.bodyMarkdown = markdown.toHTML(wiki.body);
+
           res.render('wikis/edit', 
           {
             wiki,
