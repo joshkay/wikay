@@ -192,6 +192,56 @@ describe('Wiki', () =>
         });
       });
     });
+
+    it('should not destroy the collaborators', (done) =>
+    {
+      (async () =>
+      {
+        try 
+        {
+          let wiki = await Wiki.create({
+            title: 'Example Wiki',
+            body: 'This is a test wiki body',
+            userId: this.user.id
+          });
+
+          let user2 = await User.create({
+            username: 'testuser2',
+            email: 'testuser2@example.com',
+            password: '1234567890'
+          });
+
+          let user3 = await User.create({
+            username: 'testuser3',
+            email: 'testuser3@example.com',
+            password: '1234567890'
+          });
+
+          await wiki.addCollaborator(user2);
+          await wiki.addCollaborator(user3);
+
+          let collaborators = await wiki.getCollaborators();
+
+          expect(collaborators.length).toBe(2); 
+
+          let users = await User.findAll();
+
+          expect(users.length).toBe(3);
+
+          await wiki.destroy();
+
+          users = await User.findAll();
+          expect(users.length).toBe(3);
+          
+          done();
+        }
+        catch(err)
+        {
+          expect(err).toBeNull();
+          done();
+        }
+      })();
+    });
   });
 
   describe('#getUser()', () =>
@@ -262,5 +312,93 @@ describe('Wiki', () =>
         });
       });
     });
-  })
+  });
+
+  describe('#getCollaborators()', () =>
+  {
+    it('should get all collaborators that are associated with a wiki', (done) =>
+    {
+      (async () =>
+      {
+        try 
+        {
+          let wiki = await Wiki.create({
+            title: 'Example Wiki',
+            body: 'This is a test wiki body',
+            userId: this.user.id,
+            collaborators:
+            [
+              {
+                username: 'testuser2',
+                email: 'testuser2@example.com',
+                password: '1234567890'
+              },
+              {
+                username: 'testuser3',
+                email: 'testuser3@example.com',
+                password: '1234567890'
+              }
+            ]
+          }, {
+            include: [{
+              model: User,
+              as: 'collaborators'
+            }]
+          });
+
+          let collaborators = await wiki.getCollaborators();
+
+          expect(collaborators.length).toBe(2);
+          expect(collaborators[0].username).toBe('testuser2');
+          
+          done();
+        }
+        catch(err)
+        {
+          expect(err).toBeNull();
+          done();
+        }
+      })();
+    });
+  });
+
+  describe('#addCollaborator()', () =>
+  {
+    it('should associate a wiki with a user', (done) =>
+    {
+      (async () =>
+      {
+        try 
+        {
+          let wiki = await Wiki.create({
+            title: 'Example Wiki',
+            body: 'This is a test wiki body',
+            userId: this.user.id
+          });
+
+          let collaborators = await wiki.getCollaborators();
+          expect(collaborators.length).toBe(0);
+
+          let collaborator1 = await User.create({
+            username: 'testuser2',
+            email: 'testuser2@example.com',
+            password: '1234567890'
+          });
+
+          await wiki.addCollaborator(collaborator1);
+
+          collaborators = await wiki.getCollaborators();
+
+          expect(collaborators.length).toBe(1);
+
+          done();
+        }
+        catch(err)
+        {
+          expect(err).toBeNull();
+          done();
+        }
+      })();
+    });
+  });
 });

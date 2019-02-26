@@ -33,6 +33,11 @@ module.exports = (sequelize, DataTypes) => {
       onDelete: 'CASCADE'
     });
 
+    Wiki.belongsToMany(models.User, {
+      through: 'WikiCollaborators',
+      as: 'collaborators'
+    });
+
     Wiki.SCOPE_PUBLIC = 'public';
     Wiki.addScope(Wiki.SCOPE_PUBLIC, () =>
     {
