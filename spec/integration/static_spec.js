@@ -25,7 +25,7 @@ describe('routes : static', () =>
       console.log(err);
       done();
     });
-  })
+  });
 
   describe('guest', () =>
   {

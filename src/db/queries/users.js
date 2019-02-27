@@ -37,5 +37,13 @@ module.exports =
     {
       callback(err);
     });
+  },
+  getUser(id)
+  {
+    return User.findByPk(id);
+  },
+  getUsers()
+  {
+    return User.findAll();
   }
 }

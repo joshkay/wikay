@@ -76,6 +76,22 @@ describe('routes : wikis', () =>
           userId: this.user2.id,
           private: true
         });
+
+        this.user3 = await User.create({
+          username: 'testuser3',
+          email: 'testuser3@test.com',
+          password: bcrypt.hashSync(this.userPassword, salt),
+          role: User.ROLE_PREMIUM
+        });
+
+        const wikiPrivate3Title = 'Test P Wiki 3';
+        this.wikiPrivate3 = await Wiki.create({
+          title: wikiPrivate3Title,
+          body: 'Test P Wiki 3 Body',
+          slug: slugify(wikiPrivate3Title),
+          userId: this.user3.id,
+          private: true
+        });
         
         done();
       }
@@ -120,6 +136,8 @@ describe('routes : wikis', () =>
           expect(res.body).toContain(this.wiki2.title);
           expect(res.body).not.toContain(this.wikiPrivate1.title);
           expect(res.body).not.toContain(this.wikiPrivate2.title);
+          expect(res.body).not.toContain(this.wikiPrivate3.title);
+          expect(res.body).not.toContain('Shared Private Wikis');
           expect(res.body).not.toContain('Your Wikis');
 
           done();
@@ -194,7 +212,7 @@ describe('routes : wikis', () =>
       });
     });
 
-    describe('GET /wiki/:id', () =>
+    describe('GET /wiki/:slug', () =>
     {
       it('should render a view with the selected wiki', (done) =>
       {
@@ -213,6 +231,8 @@ describe('routes : wikis', () =>
           expect(body).not.toContain(`/wiki/${this.wiki1.slug}/edit`);
           expect(body).not.toContain('Delete');
           expect(body).not.toContain(`/wiki/${this.wiki1.slug}/destroy`);
+          expect(body).not.toContain('Collaborators');
+          expect(body).not.toContain(`/wiki/${this.wiki1.slug}/collaborators`);
           done();
         });
       });
@@ -234,7 +254,7 @@ describe('routes : wikis', () =>
       });
     });
 
-    describe('GET /wiki/:id/edit', () =>
+    describe('GET /wiki/:slug/edit', () =>
     {
       it('should redirect to login page with auth error', (done) =>
       {
@@ -258,7 +278,7 @@ describe('routes : wikis', () =>
       });
     });
 
-    describe('POST /wiki/:id/update', () =>
+    describe('POST /wiki/:slug/update', () =>
     {
       it('should not update wiki and redirect to login page with auth error', (done) =>
       {
@@ -298,8 +318,105 @@ describe('routes : wikis', () =>
         });
       });
     });
+ 
+    describe('GET /wiki/:slug/collaborators', () =>
+    {
+      it('should redirect to login page with auth error', (done) =>
+      {
+        const options =
+        {
+          url: `${wikiBase}/${this.wiki1.slug}/collaborators`,
+          jar: this.jar
+        };
 
-    describe('POST /wiki/:id/destroy', () =>
+        request.get(options, (err, res, body) =>
+        {
+          expect(res.request._redirect.redirects.length).toBe(1);
+          expect(res.request._redirect.redirects[0].statusCode).toBe(302);
+          expect(res.request._redirect.redirects[0].redirectUri).toBe(loginUrl);
+          expect(body).toContain('Sign In');
+          expect(body).toContain(AUTH_MESSAGE);
+          done();
+        });
+      });
+    });
+
+    describe('POST /wiki/:slug/collaborator/add', () =>
+    {
+      it('should not add collaborator and redirect to login page with auth error', (done) =>
+      {
+        (async () =>
+        {
+          const collaborators = await this.wiki1.getCollaborators();
+
+          expect(collaborators.length).toBe(0);
+
+          const options =
+          {
+            url: `${wikiBase}/${this.wiki1.slug}/collaborator/add`,
+            form:
+            {
+              userId: this.user2.id
+            },
+            followAllRedirects: true,
+            jar: this.jar
+          };
+
+          request.post(options, (err, res, body) =>
+          {
+            expect(res.request.uri.href).toBe(loginUrl);
+            expect(body).toContain('Sign In');
+            expect(body).toContain(AUTH_MESSAGE);
+
+            (async () =>
+            {
+              const collaborators = await this.wiki1.getCollaborators();
+
+              expect(collaborators.length).toBe(0);
+              done();
+            })();
+          });
+        })();
+      });
+    });
+
+    describe('POST /wiki/:slug/collaborator/:collaboratorId/remove', () =>
+    {
+      it('should not add collaborator and redirect to login page with auth error', (done) =>
+      {
+        (async () =>
+        {
+          await this.wiki1.addCollaborator(this.user2);
+          const collaborators = await this.wiki1.getCollaborators();
+
+          expect(collaborators.length).toBe(1);
+
+          const options =
+          {
+            url: `${wikiBase}/${this.wiki1.slug}/collaborator/${this.user2.id}/remove`,
+            followAllRedirects: true,
+            jar: this.jar
+          };
+
+          request.post(options, (err, res, body) =>
+          {
+            expect(res.request.uri.href).toBe(loginUrl);
+            expect(body).toContain('Sign In');
+            expect(body).toContain(AUTH_MESSAGE);
+
+            (async () =>
+            {
+              const collaborators = await this.wiki1.getCollaborators();
+
+              expect(collaborators.length).toBe(1);
+              done();
+            })();
+          });
+        })();
+      });
+    });
+
+    describe('POST /wiki/:slug/destroy', () =>
     {
       it('should not delete wiki and redirect to login page with auth error', (done) =>
       {
@@ -401,9 +518,11 @@ describe('routes : wikis', () =>
           expect(res.body).toContain(this.wiki1.title);
           expect(res.body).toContain('Wikis');
           expect(res.body).toContain(this.wiki2.title);
+          expect(res.body).not.toContain('Private');
           expect(res.body).not.toContain(this.wikiPrivate1.title);
           expect(res.body).not.toContain(this.wikiPrivate2.title);
-          expect(res.body).not.toContain('Private');
+          expect(res.body).not.toContain('Shared Private Wikis');
+          expect(res.body).not.toContain(this.wikiPrivate3.title);
           done();
         });
       });
@@ -441,6 +560,27 @@ describe('routes : wikis', () =>
           request.get(options, (err, res, body) =>
           {
             expect(res.body).not.toContain('Upgrade to Premium');
+            done();
+          });
+        })();
+      });
+
+      it('should show wikis that the user is a collaborator on', (done) =>
+      {
+        (async () =>
+        {
+          await this.wikiPrivate3.addCollaborator(this.user1);
+
+          const options = 
+          {
+            url: `${wikiBase}s`,
+            jar: this.jar
+          };
+          
+          request.get(options, (err, res, body) =>
+          {
+            expect(res.body).toContain('Shared Private Wikis');
+            expect(res.body).toContain(this.wikiPrivate3.title);
             done();
           });
         })();
@@ -567,11 +707,11 @@ describe('routes : wikis', () =>
       });
     });
 
-    describe('GET /wiki/:id', () =>
+    describe('GET /wiki/:slug', () =>
     {
       describe('(wiki creator)', () =>
       {
-        it('should render a view with the selected wiki and allow edit/delete', (done) =>
+        it('should render a view with the selected wiki and allow edit/delete but not collaborators', (done) =>
         {
           const options = 
           {
@@ -589,6 +729,8 @@ describe('routes : wikis', () =>
             expect(body).toContain(`/wiki/${this.wiki1.slug}/edit`);
             expect(body).toContain('Delete');
             expect(body).toContain(`/wiki/${this.wiki1.slug}/destroy`);
+            expect(body).not.toContain('Collaborators');
+            expect(body).not.toContain(`/wiki/${this.wiki1.slug}/collaborators`);
             done();
           });
         });
@@ -618,9 +760,9 @@ describe('routes : wikis', () =>
         });
       });
 
-      describe('(not wiki creator)', () => 
+      describe('(not wiki creator [public])', () => 
       {
-        it('should render a view with the selected wiki and allow edit not delete', (done) =>
+        it('should render a view with the selected wiki and allow edit not delete/collaborators', (done) =>
         {
           const options =
           {
@@ -637,11 +779,16 @@ describe('routes : wikis', () =>
             expect(body).toContain(`/wiki/${this.wiki2.slug}/edit`);
             expect(body).not.toContain('Delete');
             expect(body).not.toContain(`/wiki/${this.wiki2.slug}/destroy`);
+            expect(body).not.toContain('Collaborators');
+            expect(body).not.toContain(`/wiki/${this.wiki2.slug}/collaborators`);
             done();
           });
         });
+      });
 
-        it('should not show a private wiki and redirect to wikis', (done) =>
+      describe('(not wiki creator [private])', () => 
+      {
+        it('should not show the wiki and redirect to wikis', (done) =>
         {
           const options =
           {
@@ -659,9 +806,44 @@ describe('routes : wikis', () =>
           });
         });
       });
+        
+      describe('(not wiki creator [private & collaborator])', () => 
+      {
+        beforeEach((done) =>
+        {
+          (async () =>
+          {
+            await this.wikiPrivate3.addCollaborator(this.user1);
+            done();
+          })();
+        });
+
+        it('should show the wiki and allow edit not delete/collaborators', (done) =>
+        {
+          const options = 
+          {
+            url: `${wikiBase}/${this.wikiPrivate3.slug}`,
+            jar: this.jar
+          };
+          
+          request.get(options, (err, res, body) =>
+          {
+            expect(res.statusCode).toBe(200);
+            expect(body).toContain(this.wikiPrivate3.title);
+            expect(body).toContain(this.wikiPrivate3.body);
+            expect(body).toContain('Edit');
+            expect(body).toContain(`/wiki/${this.wikiPrivate3.slug}/edit`);
+            expect(body).not.toContain('Delete');
+            expect(body).not.toContain(`/wiki/${this.wikiPrivate3.slug}/destroy`);
+            expect(body).not.toContain('Collaborators');
+            expect(body).not.toContain(`/wiki/${this.wikiPrivate3.slug}/collaborators`);
+            done();
+          });
+        });
+      });
     });
 
-    describe('GET /wiki/:id/edit', () =>
+    describe('GET /wiki/:slug/edit', () =>
     {
       describe('(wiki creator)', () =>
       {
@@ -713,7 +895,7 @@ describe('routes : wikis', () =>
         });
       });
 
-      describe('(not wiki creator)', () =>
+      describe('(not wiki creator [public])', () =>
       {
         it('should render an edit view for the selected wiki', (done) =>
         {
@@ -733,13 +915,71 @@ describe('routes : wikis', () =>
             expect(body).toContain('Body');
             expect(body).toContain(this.wiki2.body);
             expect(body).not.toContain('Private');
+            expect(body).not.toContain('check');
+            done();
+          });
+        });
+      });
+
+      describe('(not wiki creator [private])', () => 
+      {
+        it('should not render an edit view and redirect to wikis', (done) =>
+        {
+          const options =
+          {
+            url: `${wikiBase}/${this.wikiPrivate2.slug}/edit`,
+            jar: this.jar
+          };
+          
+          request.get(options, (err, res, body) =>
+          {
+            expect(res.request._redirect.redirects.length).toBe(2);
+            expect(res.request._redirect.redirects[0].statusCode).toBe(302);
+            expect(res.request._redirect.redirects[0].redirectUri).toBe(`${wikiBase}/${this.wikiPrivate2.slug}`);
+            expect(res.request._redirect.redirects[1].redirectUri).toBe(`${wikiBase}s`);
+            expect(body).toContain(AUTHORIZATION_MESSAGE);
+            done();
+          });
+        });
+      });
+        
+      describe('(not wiki creator [private & collaborator])', () => 
+      {
+        beforeEach((done) =>
+        {
+          (async () =>
+          {
+            await this.wikiPrivate3.addCollaborator(this.user1);
+            done();
+          })();
+        });
+
+        it('should render an edit view without allowing private changes', (done) =>
+        {
+          const options = 
+          {
+            url: `${wikiBase}/${this.wikiPrivate3.slug}/edit`,
+            jar: this.jar
+          };
+  
+          request.get(options, (err, res, body) =>
+          {
+            expect(res.statusCode).toBe(200);
+            expect(body).toContain('Edit Wiki');
+            expect(body).toContain(`/wiki/${this.wikiPrivate3.slug}/update`);
+            expect(body).toContain('Title');
+            expect(body).toContain(this.wikiPrivate3.title);
+            expect(body).toContain('Body');
+            expect(body).toContain(this.wikiPrivate3.body);
+            expect(body).not.toContain('Private');
+            expect(body).not.toContain('check');
             done();
           });
         });
       });
     });
 
-    describe('POST /wiki/:id/update', () =>
+    describe('POST /wiki/:slug/update', () =>
     {
       describe('(wiki creator)', () =>
       {
@@ -787,7 +1027,7 @@ describe('routes : wikis', () =>
         });
       });
 
-      describe('(not wiki creator)', () =>
+      describe('(not wiki creator [public])', () =>
       {
         it('should update wiki and redirect to the wiki page', (done) =>
         {
@@ -867,10 +1107,276 @@ describe('routes : wikis', () =>
             });
           });
         });
-      });  
+      });
+
+      describe('(not wiki creator [private])', () => 
+      {
+        it('should not update wiki and redirect to wikis', (done) =>
+        {
+          const newWikiTitle = 'Test Wiki Updated';
+          const newWikiBody = 'Test Long Test Wiki Body :) Test Long Test Wiki Body :) Test Long Test Wiki Body :) Test Long Test Wiki Body :) Test Long Test Wiki Body :) Test Long Test Wiki Body :)';
+
+          const options =
+          {
+            url: `${wikiBase}/${this.wikiPrivate2.slug}/update`,
+            form:
+            {
+              title: newWikiTitle,
+              body: newWikiBody
+            },
+            followAllRedirects: true,
+            jar: this.jar
+          };
+
+          request.post(options, (err, res, body) =>
+          {
+            expect(res.request.uri.href).toBe(`${wikiBase}s`);
+
+            Wiki.findByPk(this.wikiPrivate2.id)
+            .then((wiki) =>
+            {
+              expect(wiki.title).toBe(this.wikiPrivate2.title);
+              expect(wiki.body).toBe(this.wikiPrivate2.body);
+              done();
+            })
+            .catch((err) =>
+            {
+              expect(err).toBeNull();
+              done();
+            });
+          });
+        });
+
+        it('should not update wiki private status and redirect to wikis', (done) =>
+        {
+          const newWikiTitle = 'Test Wiki Updated';
+          const newWikiBody = 'Test Long Test Wiki Body :) Test Long Test Wiki Body :) Test Long Test Wiki Body :) Test Long Test Wiki Body :) Test Long Test Wiki Body :) Test Long Test Wiki Body :)';
+
+          const options =
+          {
+            url: `${wikiBase}/${this.wikiPrivate2.slug}/update`,
+            form:
+            {
+              title: newWikiTitle,
+              body: newWikiBody,
+              private: false
+            },
+            followAllRedirects: true,
+            jar: this.jar
+          };
+
+          request.post(options, (err, res, body) =>
+          {
+            expect(res.request.uri.href).toBe(`${wikiBase}s`);
+            expect(body).not.toContain(this.wikiPrivate2.title);
+
+            Wiki.findByPk(this.wikiPrivate2.id)
+            .then((wiki) =>
+            {
+              expect(wiki.private).toBe(true);
+              done();
+            })
+            .catch((err) =>
+            {
+              expect(err).toBeNull();
+              done();
+            });
+          });
+        });
+      });
+        
+      describe('(not wiki creator [private & collaborator])', () => 
+      {
+        beforeEach((done) =>
+        {
+          (async () =>
+          {
+            await this.wikiPrivate3.addCollaborator(this.user1);
+            done();
+          })();
+        });
+
+        it('should update wiki and redirect to the wiki page', (done) =>
+        {
+          const newWikiTitle = 'Test Wiki Updated';
+          const newWikiBody = 'Test Long Test Wiki Body :) Test Long Test Wiki Body :) Test Long Test Wiki Body :) Test Long Test Wiki Body :) Test Long Test Wiki Body :) Test Long Test Wiki Body :)';
+
+          const options =
+          {
+            url: `${wikiBase}/${this.wikiPrivate3.slug}/update`,
+            form:
+            {
+              title: newWikiTitle,
+              body: newWikiBody
+            },
+            followAllRedirects: true,
+            jar: this.jar
+          };
+
+          request.post(options, (err, res, body) =>
+          {
+            expect(res.request.uri.href).toBe(`${wikiBase}/${this.wikiPrivate3.slug}`);
+            expect(body).toContain(newWikiTitle);
+            expect(body).toContain(newWikiBody);
+
+            Wiki.findByPk(this.wikiPrivate3.id)
+            .then((wiki) =>
+            {
+              expect(wiki.title).toBe(newWikiTitle);
+              expect(wiki.body).toBe(newWikiBody);
+              done();
+            })
+            .catch((err) =>
+            {
+              expect(err).toBeNull();
+              done();
+            });
+          });
+        });
+
+        it('should not update wiki private status and redirect to the wiki page', (done) =>
+        {
+          const newWikiTitle = 'Test Wiki Updated';
+          const newWikiBody = 'Test Long Test Wiki Body :) Test Long Test Wiki Body :) Test Long Test Wiki Body :) Test Long Test Wiki Body :) Test Long Test Wiki Body :) Test Long Test Wiki Body :)';
+
+          const options =
+          {
+            url: `${wikiBase}/${this.wikiPrivate3.slug}/update`,
+            form:
+            {
+              title: newWikiTitle,
+              body: newWikiBody,
+              private: false
+            },
+            followAllRedirects: true,
+            jar: this.jar
+          };
+
+          request.post(options, (err, res, body) =>
+          {
+            expect(res.request.uri.href).toBe(`${wikiBase}/${this.wikiPrivate3.slug}`);
+            expect(body).toContain(newWikiTitle);
+            expect(body).toContain(newWikiBody);
+
+            Wiki.findByPk(this.wikiPrivate3.id)
+            .then((wiki) =>
+            {
+              expect(wiki.title).toBe(newWikiTitle);
+              expect(wiki.body).toBe(newWikiBody);
+              expect(wiki.private).toBe(true);
+              done();
+            })
+            .catch((err) =>
+            {
+              expect(err).toBeNull();
+              done();
+            });
+          });
+        });
+      });
     });
 
-    describe('POST /wiki/:id/destroy', () =>
+    describe('GET /wiki/:slug/collaborators', () =>
+    {
+      const options = 
+      {
+        url:`${wikiBase}/collaborators`,
+        jar: this.jar 
+      };
+
+      it('should redirect to wiki page with authorization error', (done) =>
+      {
+        const options =
+        {
+          url: `${wikiBase}/${this.wiki1.slug}/collaborators`,
+          jar: this.jar
+        };
+
+        request.get(options, (err, res, body) =>
+        {
+          expect(res.request._redirect.redirects.length).toBe(1);
+          expect(res.request._redirect.redirects[0].statusCode).toBe(302);
+          expect(res.request._redirect.redirects[0].redirectUri).toBe(`${wikiBase}/${this.wiki1.slug}`);
+          expect(body).toContain(AUTHORIZATION_MESSAGE);
+          done();
+        });
+      });
+    });
+
+    describe('POST /wiki/:slug/collaborator/add', () =>
+    {
+      it('should not add collaborator and redirect to wiki page with authorization error', (done) =>
+      {
+        (async () =>
+        {
+          const collaborators = await this.wiki1.getCollaborators();
+
+          expect(collaborators.length).toBe(0);
+
+          const options =
+          {
+            url: `${wikiBase}/${this.wiki1.slug}/collaborator/add`,
+            form:
+            {
+              userId: this.user2.id
+            },
+            followAllRedirects: true,
+            jar: this.jar
+          };
+
+          request.post(options, (err, res, body) =>
+          {
+            expect(res.request.uri.href).toBe(`${wikiBase}/${this.wiki1.slug}`);
+            expect(body).toContain(AUTHORIZATION_MESSAGE);
+
+            (async () =>
+            {
+              const collaborators = await this.wiki1.getCollaborators();
+
+              expect(collaborators.length).toBe(0);
+              done();
+            })();
+          });
+        })();
+      });
+    });
+
+    describe('POST /wiki/:slug/collaborator/:collaboratorId/remove', () =>
+    {
+      it('should not add collaborator and redirect to wiki page with authorization error', (done) =>
+      {
+        (async () =>
+        {
+          await this.wiki1.addCollaborator(this.user2);
+          const collaborators = await this.wiki1.getCollaborators();
+
+          expect(collaborators.length).toBe(1);
+
+          const options =
+          {
+            url: `${wikiBase}/${this.wiki1.slug}/collaborator/${this.user2.id}/remove`,
+            followAllRedirects: true,
+            jar: this.jar
+          };
+
+          request.post(options, (err, res, body) =>
+          {
+            expect(res.request.uri.href).toBe(`${wikiBase}/${this.wiki1.slug}`);
+            expect(body).toContain(AUTHORIZATION_MESSAGE);
+
+            (async () =>
+            {
+              const collaborators = await this.wiki1.getCollaborators();
+
+              expect(collaborators.length).toBe(1);
+              done();
+            })();
+          });
+        })();
+      });
+    });
+
+    describe('POST /wiki/:slug/destroy', () =>
     {
       describe('(wiki creator)', () =>
       {
@@ -1114,7 +1620,7 @@ describe('routes : wikis', () =>
       });
     });
 
-    describe('GET /wiki/:id', () =>
+    describe('GET /wiki/:slug', () =>
     {
       describe('(wiki creator)', () =>
       {
@@ -1205,7 +1711,7 @@ describe('routes : wikis', () =>
       });
     });
 
-    describe('GET /wiki/:id/edit', () =>
+    describe('GET /wiki/:slug/edit', () =>
     {
       describe('(wiki creator)', () =>
       {
@@ -1302,7 +1808,7 @@ describe('routes : wikis', () =>
       });
     });
 
-    describe('POST /wiki/:id/update', () =>
+    describe('POST /wiki/:slug/update', () =>
     {
       describe('(wiki creator)', () =>
       {
@@ -1549,7 +2055,228 @@ describe('routes : wikis', () =>
       });
     });
 
-    describe('POST /wiki/:id/destroy', () =>
+    describe('GET /wiki/:slug/collaborators', () =>
+    {
+      describe('(wiki creator [public])', () =>
+      {
+        it('should redirect to wiki page with authorization error', (done) =>
+        {
+          const options =
+          {
+            url: `${wikiBase}/${this.wiki1.slug}/collaborators`,
+            jar: this.jar
+          };
+
+          request.get(options, (err, res, body) =>
+          {
+            expect(res.request._redirect.redirects.length).toBe(1);
+            expect(res.request._redirect.redirects[0].statusCode).toBe(302);
+            expect(res.request._redirect.redirects[0].redirectUri).toBe(`${wikiBase}/${this.wiki1.slug}`);
+            expect(body).toContain(AUTHORIZATION_MESSAGE);
+            done();
+          });
+        });
+      });
+
+      describe('(wiki creator [private])', () =>
+      {
+        beforeEach((done) =>
+        {
+          (async () =>
+          {
+            await this.wikiPrivate1.addCollaborator(this.user2);
+            done();
+          })();
+        });
+
+        it('should render a collaborators page that lists users to add and shows existing collaborators with option to remove', (done) =>
+        {
+          const options =
+          {
+            url: `${wikiBase}/${this.wikiPrivate1.slug}/collaborators`,
+            jar: this.jar
+          };
+
+          request.get(options, (err, res, body) =>
+          {
+            expect(body).toContain(this.user2.username);
+            expect(body).toContain(this.user3.username);
+            expect(body).toContain(`/${this.wikiPrivate1.slug}/collaborator/add`);
+            expect(body).toContain(`/${this.wikiPrivate1.slug}/collaborator/${this.user2.id}/remove`);
+            done();
+          });
+        });
+      });
+    });
+
+    describe('POST /wiki/:slug/collaborator/add', () =>
+    {
+      describe('(wiki creator [public])', () =>
+      {
+        it('should not add collaborator and redirect to wiki page with authorization error', (done) =>
+        {
+          (async () =>
+          {
+            const collaborators = await this.wiki1.getCollaborators();
+
+            expect(collaborators.length).toBe(0);
+
+            const options =
+            {
+              url: `${wikiBase}/${this.wiki1.slug}/collaborator/add`,
+              form:
+              {
+                collaborator: this.user2.id
+              },
+              followAllRedirects: true,
+              jar: this.jar
+            };
+
+            request.post(options, (err, res, body) =>
+            {
+              expect(res.request.uri.href).toBe(`${wikiBase}/${this.wiki1.slug}`);
+              expect(body).toContain(AUTHORIZATION_MESSAGE);
+
+              (async () =>
+              {
+                const collaborators = await this.wiki1.getCollaborators();
+
+                expect(collaborators.length).toBe(0);
+                done();
+              })();
+            });
+          })();
+        });
+      });
+
+      describe('(wiki creator [private])', () =>
+      {
+        it('should add collaborator and reload page', (done) =>
+        {
+          (async () =>
+          {
+            const collaborators = await this.wikiPrivate1.getCollaborators();
+
+            expect(collaborators.length).toBe(0);
+
+            const options =
+            {
+              url: `${wikiBase}/${this.wikiPrivate1.slug}/collaborator/add`,
+              form:
+              {
+                collaborator: this.user2.id
+              },
+              headers:
+              {
+                referer: `${wikiBase}/${this.wikiPrivate1.slug}/collaborators`
+              },
+              followAllRedirects: true,
+              jar: this.jar
+            };
+
+            request.post(options, (err, res, body) =>
+            {
+              expect(res.request.uri.href).toBe(`${wikiBase}/${this.wikiPrivate1.slug}/collaborators`);
+              expect(body).toContain(`/${this.wikiPrivate1.slug}/collaborator/${this.user2.id}/remove`);
+
+              (async () =>
+              {
+                const collaborators = await this.wikiPrivate1.getCollaborators();
+
+                expect(collaborators.length).toBe(1);
+                done();
+              })();
+            });
+          })();
+        });
+      });
+    });
+    
+    describe('POST /wiki/:slug/collaborator/:collaboratorId/remove', () =>
+    {
+      beforeEach((done) =>
+      {
+        (async () =>
+        {
+          await this.wikiPrivate1.addCollaborator(this.user2);
+          done();
+        })();
+      });
+      
+      describe('(wiki creator [public])', () =>
+      {
+        it('should not remove collaborator and redirect to wiki page with authorization error', (done) =>
+        {
+          (async () =>
+          {
+            const collaborators = await this.wiki1.getCollaborators();
+
+            expect(collaborators.length).toBe(0);
+
+            const options =
+            {
+              url: `${wikiBase}/${this.wiki1.slug}/collaborator/${this.user2.id}/remove`,
+              followAllRedirects: true,
+              jar: this.jar
+            };
+
+            request.post(options, (err, res, body) =>
+            {
+              expect(res.request.uri.href).toBe(`${wikiBase}/${this.wiki1.slug}`);
+              expect(body).toContain(AUTHORIZATION_MESSAGE);
+
+              (async () =>
+              {
+                const collaborators = await this.wiki1.getCollaborators();
+
+                expect(collaborators.length).toBe(0);
+                done();
+              })();
+            });
+          })();
+        });
+      });
+
+      describe('(wiki creator [private])', () =>
+      {
+        it('should remove collaborator and reload page', (done) =>
+        {
+          (async () =>
+          {
+            const collaborators = await this.wikiPrivate1.getCollaborators();
+
+            expect(collaborators.length).toBe(1);
+
+            const options =
+            {
+              url: `${wikiBase}/${this.wikiPrivate1.slug}/collaborator/${this.user2.id}/remove`,
+              followAllRedirects: true,
+              headers:
+              {
+                referer: `${wikiBase}/${this.wikiPrivate1.slug}/collaborators`
+              },
+              jar: this.jar
+            };
+
+            request.post(options, (err, res, body) =>
+            {
+              expect(res.request.uri.href).toBe(`${wikiBase}/${this.wikiPrivate1.slug}/collaborators`);
+              expect(body).not.toContain(`/${this.wikiPrivate1.slug}/collaborator/${this.user2.id}/remove`);
+
+              (async () =>
+              {
+                const collaborators = await this.wikiPrivate1.getCollaborators();
+
+                expect(collaborators.length).toBe(0);
+                done();
+              })();
+            });
+          })();
+        });
+      });
+    });
+
+    describe('POST /wiki/:slug/destroy', () =>
     {
       describe('(wiki creator)', () =>
       {
@@ -1793,7 +2520,7 @@ describe('routes : wikis', () =>
       });
     });
 
-    describe('GET /wiki/:id', () =>
+    describe('GET /wiki/:slug', () =>
     {
       describe('(wiki creator)', () =>
       {
@@ -1888,7 +2615,7 @@ describe('routes : wikis', () =>
       });
     });
 
-    describe('GET /wiki/:id/edit', () =>
+    describe('GET /wiki/:slug/edit', () =>
     {
       describe('(wiki creator)', () =>
       {
@@ -1987,7 +2714,7 @@ describe('routes : wikis', () =>
       });
     });
 
-    describe('POST /wiki/:id/update', () =>
+    describe('POST /wiki/:slug/update', () =>
     {
       describe('(wiki creator)', () =>
       {
@@ -2234,7 +2961,7 @@ describe('routes : wikis', () =>
       });
     });
 
-    describe('POST /wiki/:id/destroy', () =>
+    describe('POST /wiki/:slug/destroy', () =>
     {
       describe('(wiki creator)', () =>
       {

@@ -45,10 +45,10 @@ module.exports = (sequelize, DataTypes) => {
       as: 'wikis'
     });
 
-    // User.belongsToMany(models.Wiki, {
-    //   through: 'WikiCollaborators',
-    //   as: 'collaborators'
-    // });
+    User.belongsToMany(models.Wiki, {
+      foreignKey: 'userId',
+      through: 'WikiCollaborators'
+    });
   };
 
   User.prototype.isOwner = function(wiki)

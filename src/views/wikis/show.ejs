@@ -24,6 +24,10 @@
         <a href="/wiki/<%= wiki.slug %>/edit" class="btn btn-warning">Edit</a>
       <% } %>
 
+      <% if (policy.collaborators()) { %>
+        <a href="/wiki/<%= wiki.slug %>/collaborators" class="btn btn-secondary">Collaborators</a>
+      <% } %>
+
       <% if (policy.destroy()) { %>
         <form style="display:initial" action="/wiki/<%= wiki.slug %>/destroy" method="post">
           <button type="submit" class="btn btn-danger">Delete</button>

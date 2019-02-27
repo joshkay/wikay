@@ -34,6 +34,7 @@ module.exports = (sequelize, DataTypes) => {
     });
 
     Wiki.belongsToMany(models.User, {
+      foreignKey: 'wikiId',
       through: 'WikiCollaborators',
       as: 'collaborators'
     });
@@ -47,5 +48,15 @@ module.exports = (sequelize, DataTypes) => {
       };
     });
   };
+
+  Wiki.prototype.isCollaborator = function(user)
+  {
+    if (this.private && this.collaborators && user)
+    {
+      return this.collaborators.map(collaborator => collaborator.id).includes(user.id);
+    }
+    return false;
+  }
+
   return Wiki;
 };

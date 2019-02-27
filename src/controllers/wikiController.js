@@ -1,6 +1,7 @@
 const passport = require('passport');
 const markdown = require('markdown').markdown;
 
+const userQueries = require('../db/queries/users');
 const wikiQueries = require('../db/queries/wikis');
 const Authorizer = require('../policies/wiki');
 
@@ -24,6 +25,7 @@ module.exports =
         else
         {
           let userWikis = null;
+          let sharedWikis = null;
           let publicWikis = null;
 
           if (req.user)
@@ -33,6 +35,8 @@ module.exports =
             {
               return wiki.userId === req.user.id;
             });
+
+            sharedWikis = wikis.filter(wiki => wiki.isCollaborator(req.user));
 
             publicWikis = wikis.filter((wiki) =>
             {
@@ -48,9 +52,10 @@ module.exports =
             });
           }
 
-          res.render('wikis/index', 
+          res.render('wikis/index',
           {
             userWikis,
+            sharedWikis,
             publicWikis
           });
         }
@@ -117,14 +122,12 @@ module.exports =
   },
   show(req, res, next)
   {
-    wikiQueries.getWiki(req.params.id, (err, wiki) =>
+    (async () =>
     {
-      if (err || wiki == null)
+      try
       {
-        res.redirect(500, '/');
-      }
-      else
-      {
+        const wiki = await wikiQueries.getWiki(req.params.slug);
+
         const authorizer = new Authorizer(req.user, wiki);
         const authorized = authorizer.show();
 
@@ -144,18 +147,21 @@ module.exports =
           return res.redirect('/wikis');
         }
       }
-    });
+      catch(err)
+      {
+        console.log(err);
+        res.redirect(500, '/');
+      }
+    })();
   },
   edit(req, res, next)
   {
-    wikiQueries.getWiki(req.params.id, (err, wiki) =>
+    (async () =>
     {
-      if (err || wiki == null)
+      try
       {
-        res.redirect(500, '/');
-      }
-      else
-      {
+        const wiki = await wikiQueries.getWiki(req.params.slug);
+
         const authorizer = new Authorizer(req.user, wiki);
         const authorized = authorizer.edit();
 
@@ -172,27 +178,29 @@ module.exports =
         else
         {
           policyHelpers.handleFailed(req, res);
-          res.redirect(`/wiki/${req.params.id}`);
+          res.redirect(`/wiki/${req.params.slug}`);
         }
       }
-    });
-  },
-  update(req, res, net)
-  {
-    wikiQueries.getWiki(req.params.id, (err, wiki) =>
-    {
-      if (err || wiki == null)
+      catch(err)
       {
         res.redirect(500, '/');
       }
-      else
+    })();
+  },
+  update(req, res, net)
+  {
+    (async () =>
+    {
+      try
       {
+        const wiki = await wikiQueries.getWiki(req.params.slug);
+
         const authorizer = new Authorizer(req.user, wiki);
         const authorized = authorizer.update();
 
         if (authorized)
         {
-          const private = authorizer.updatePrivate() ? (req.body.private != undefined) : false;
+          const private = authorizer.updatePrivate() ? (req.body.private != undefined) : wiki.private;
           const updatedWikiData =
           {
             title: req.body.title,
@@ -216,21 +224,122 @@ module.exports =
         else
         {
           policyHelpers.handleFailed(req, res);
-          res.redirect(`/wiki/${req.params.id}`);
+          res.redirect(`/wiki/${req.params.slug}`);
         }
       }
-    });
-  },
-  destroy(req, res, net)
-  {
-    wikiQueries.getWiki(req.params.id, (err, wiki) =>
-    {
-      if (err || wiki == null)
+      catch(err)
       {
         res.redirect(500, '/');
       }
-      else
+    })();
+  },
+  collaborators(req, res, next)
+  {
+    (async () =>
+    {
+      try
       {
+        const wiki = await wikiQueries.getWiki(req.params.slug);
+
+        const authorizer = new Authorizer(req.user, wiki);
+        const authorized = authorizer.collaborators();
+
+        if (authorized)
+        {
+          const collaborators = await wikiQueries.getWikiCollaborators(wiki);
+
+          const users = await userQueries.getUsers()
+            .filter(user => user.id !== req.user.id)
+            .filter(user => !collaborators.map(user => user.id).includes(user.id));
+          
+          res.render('wikis/collaborators',
+          {
+            wiki,
+            users,
+            collaborators
+          });
+        }
+        else
+        {
+          policyHelpers.handleFailed(req, res);
+          res.redirect(`/wiki/${req.params.slug}`);
+        }
+      }
+      catch(err)
+      {
+        res.redirect(500, '/');
+      }
+    })();
+  },
+  addCollaborator(req, res, next)
+  {
+    (async () =>
+    {
+      try
+      {
+        const wiki = await wikiQueries.getWiki(req.params.slug);
+
+        const authorizer = new Authorizer(req.user, wiki);
+        const authorized = authorizer.addCollaborator();
+  
+        if (authorized)
+        {
+          const newCollaborator = await userQueries.getUser(req.body.collaborator);
+          const collaborators = await wikiQueries.addWikiCollaborator(wiki, newCollaborator);
+  
+          res.redirect('back');
+        }
+        else
+        {
+          policyHelpers.handleFailed(req, res);
+          res.redirect(`/wiki/${req.params.slug}`);
+        }
+      }
+      catch(err)
+      {
+        res.redirect(500, '/');
+      }
+    })();
+  },
+  removeCollaborator(req, res, next)
+  {
+    (async () =>
+    {
+      try
+      {
+        const wiki = await wikiQueries.getWiki(req.params.slug);
+
+        const authorizer = new Authorizer(req.user, wiki);
+        const authorized = authorizer.removeCollaborator();
+  
+        if (authorized)
+        {
+          const existingCollaborator = await userQueries.getUser(req.params.collaboratorId);
+          const collaborators = await wikiQueries.removeWikiCollaborator(wiki, existingCollaborator);
+  
+          res.redirect('back');
+        }
+        else
+        {
+          policyHelpers.handleFailed(req, res);
+          res.redirect(`/wiki/${req.params.slug}`);
+        }
+      }
+      catch(err)
+      {
+        console.log(err);
+        res.redirect(500, '/');
+      }
+    })();
+  },
+  destroy(req, res, net)
+  {
+    (async () =>
+    {
+      try
+      {
+        const wiki = await wikiQueries.getWiki(req.params.slug);
+
         const authorized = new Authorizer(req.user, wiki).destroy();
 
         if (authorized)
@@ -251,9 +360,13 @@ module.exports =
         else
         {
           policyHelpers.handleFailed(req, res);
-          res.redirect(`/wiki/${req.params.id}`);
+          res.redirect(`/wiki/${req.params.slug}`);
         }
       }
-    });
+      catch(err)
+      {
+        res.redirect(500, '/');
+      }
+    })();
   }
 };
