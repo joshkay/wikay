@@ -1,12 +1,18 @@
 const slugify = require('slugify');
 
 const Wiki = require('../models').Wiki;
+const User = require('../models').User;
 
 module.exports =
 {
   getAllWikis(callback)
   {
-    return Wiki.findAll()
+    return Wiki.findAll({
+      include: [{
+        model: User,
+        as: 'collaborators'
+      }]
+    })
     .then((wikis) =>
     {
       callback(null, wikis);
@@ -49,18 +55,14 @@ module.exports =
       callback(err);
     });
   },
-  getWiki(wikiSlug, callback)
+  getWiki(wikiSlug)
   {
     return Wiki.findOne({
-      where: {slug: wikiSlug}
-    })
-    .then((wiki) =>
-    {
-      callback(null, wiki);
-    })
-    .catch((err) =>
-    {
-      callback(err);
+      where: {slug: wikiSlug},
+      include: [{
+        model: User,
+        as: 'collaborators'
+      }]
     });
   },
   updateWiki(updatedWiki, wiki, callback)
@@ -100,5 +102,17 @@ module.exports =
     {
       callback(err);
     });
+  },
+  getWikiCollaborators(wiki)
+  {
+    return wiki.getCollaborators();
+  },
+  addWikiCollaborator(wiki, user)
+  {
+    return wiki.addCollaborator(user);
+  },
+  removeWikiCollaborator(wiki, user)
+  {
+    return wiki.removeCollaborator(user);
   }
 }

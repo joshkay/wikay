@@ -6,7 +6,7 @@ module.exports = class WikiPolicy extends ApplicationPolicy
   {
     if (this.record && this.record.private)
     {
-      return this._isOwner() || this._isAdmin();
+      return this._isOwner() || this.record.isCollaborator(this.user) || this._isAdmin();
     }
     return super.show();
   }
@@ -15,7 +15,7 @@ module.exports = class WikiPolicy extends ApplicationPolicy
   {
     if (this.record && this.record.private)
     {
-      return this._isOwner() || this._isAdmin();
+      return this._isOwner() || this.record.isCollaborator(this.user) || this._isAdmin();
     }
     return super.edit();
   } 
@@ -29,5 +29,24 @@ module.exports = class WikiPolicy extends ApplicationPolicy
   updatePrivate()
   {
     return this.createPrivate() && this._isOwner();
+  }
+
+  collaborators()
+  {
+    if (this.record && this.record.private)
+    {
+      return this._isOwner() || this._isAdmin();
+    }
+    return false;
+  }
+
+  addCollaborator()
+  {
+    return this.collaborators();
+  }
+
+  removeCollaborator()
+  {
+    return this.collaborators();
   }
 };

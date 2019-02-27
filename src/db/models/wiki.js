@@ -33,6 +33,12 @@ module.exports = (sequelize, DataTypes) => {
       onDelete: 'CASCADE'
     });
 
+    Wiki.belongsToMany(models.User, {
+      foreignKey: 'wikiId',
+      through: 'WikiCollaborators',
+      as: 'collaborators'
+    });
+
     Wiki.SCOPE_PUBLIC = 'public';
     Wiki.addScope(Wiki.SCOPE_PUBLIC, () =>
     {
@@ -42,5 +48,15 @@ module.exports = (sequelize, DataTypes) => {
       };
     });
   };
+
+  Wiki.prototype.isCollaborator = function(user)
+  {
+    if (this.private && this.collaborators && user)
+    {
+      return this.collaborators.map(collaborator => collaborator.id).includes(user.id);
+    }
+    return false;
+  }
+
   return Wiki;
 };

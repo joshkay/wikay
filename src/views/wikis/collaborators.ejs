@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <% include ../static/partials/head.ejs %>
+  </head>
+  <body>
+    <% include ../static/partials/navbar.ejs %>
+
+    <main class="container">
+    
+      <% include ../static/partials/messages.ejs %>
+
+      <% if (users && users.length > 0) { %>
+        <h1>Manage Collaborators</h1>
+
+        <form action="/wiki/<%= wiki.slug %>/collaborator/add" method="post">
+          <div class="form-group">
+            <label for="collaborator">User</label>
+
+            <select id="collaborator" class="form-control" name="collaborator" aria-describedby="collaboratorHelp">
+              <% users.forEach((user) => { %>
+                <option value="<%= user.id %>"><%= user.username %></option>
+              <% }) %>
+            </select>
+          </div>
+          
+          <button type="submit" class="btn btn-primary">Add</button>
+        </form>
+      <% } %>
+
+      <% if (collaborators && collaborators.length > 0) { %>
+        <h2>Collaborators</h2>
+
+        <ul class="list-group">
+          <% collaborators.forEach((user) => { %>
+            <li class="list-group-item">
+              <form action="/wiki/<%= wiki.slug %>/collaborator/<%= user.id %>/remove" method="post"
+                class="d-flex justify-content-between align-items-center">
+                <%= user.username %>
+
+                <button type="submit" class="btn btn-warning">Remove</button>
+              </form>
+            </li>
+          <% }) %>
+        </div>      
+      <% } %>
+    </main>
+
+    <% include ../static/partials/baseScripts.ejs %>
+  </body>
+</html>
